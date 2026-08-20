@@ -1,0 +1,15 @@
+[Unit]
+Description=Uttarakhand e-Seva Admin Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=${SERVICE_USER}
+WorkingDirectory=${REPO_ROOT}
+Environment=NODE_ENV=production
+ExecStart=${PNPM_BIN} --filter admin start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

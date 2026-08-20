@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "matha": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@10kdevs/matha",
+        "serve",
+        "--project",
+        "/home/pelocal/Desktop/Pelocal/PMLI/uttrakhand_bot"
+      ],
+      "description": "MATHA persistent cognitive layer"
+    }
+  }
+}

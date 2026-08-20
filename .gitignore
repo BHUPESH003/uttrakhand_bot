@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.env
+.env*.local
+*.log
+.DS_Store
+.next/
+
+# Real deploy-time secrets (domains/ports are fine to commit, but this file
+# also ends up holding CERTBOT_EMAIL etc. — copy deploy/.env.deploy.example
+# instead of editing that template in place).
+deploy/.env.deploy
+
+# matha: rebuilt from git history on read — not worth merge-conflicting over.
+# (boundaries.json/ownership.json/shape.json under cortex/ are constant, stay committed)
+.matha/cortex/analysis.json
+.matha/cortex/stability.json
+.matha/cortex/co-changes.json

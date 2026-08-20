@@ -1,0 +1,101 @@
+// Prisma schema for the Uttarakhand bot's shared database.
+//
+// Modeled on the reference WhatsApp bot's entities (MessageHistory,
+// WhatsAppSessionDetail, MetaAuditDetail) — see MessageLog and
+// isWithinWindow() in src/messages.ts for how the 24h-window check mirrors
+// WhatsAppSessionDetail without needing a separate session-expiry table.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CertificateType {
+  BIRTH
+  DEATH
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum MessageDirection {
+  INCOMING
+  OUTGOING
+}
+
+/// One certificate application. Modeled on the reference bot's booking
+/// record: a human-friendly reference number is what the user actually
+/// sees and types back in (e.g. to Track Status), `formData` stays a
+/// flexible JSON bag for demo purposes rather than a column per field.
+model CertificateApplication {
+  id                 String            @id @default(cuid())
+  referenceNumber    String            @unique
+  type               CertificateType
+  status             ApplicationStatus @default(SUBMITTED)
+  applicantName      String
+  mobileNumber       String?
+  language           String
+  formData           Json
+  certificatePdfPath String?
+  rejectionReason    String?
+  reviewedAt         DateTime?
+  reviewedByName     String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([mobileNumber, createdAt])
+  @@map("certificate_applications")
+}
+
+/// Issued when the bot hands a user off to the web form (APPLY_HANDOFF).
+/// The web form (not built yet) will resolve this token to know who's
+/// filling it out, then call attachApplicationToToken once submitted.
+model HandoffToken {
+  token         String          @id
+  mobileNumber  String
+  service       CertificateType
+  language      String
+  applicantName String
+  applicationId String?
+  createdAt     DateTime        @default(now())
+  expiresAt     DateTime
+
+  @@map("handoff_tokens")
+}
+
+/// Conversation state, replacing the in-memory Map from Phase 2. One row
+/// per phone number; `data` holds the same free-form bag the flow states
+/// read/write (lang, name, service, token, ...).
+model Session {
+  userId          String   @id
+  currentStateKey String
+  data            Json
+  lastInboundAt   DateTime
+  updatedAt       DateTime @updatedAt
+
+  @@map("sessions")
+}
+
+/// Every inbound/outbound WhatsApp message, for audit — mirrors the
+/// reference bot's MessageHistory + MetaAuditDetail tables.
+model MessageLog {
+  id           String           @id @default(cuid())
+  mobileNumber String
+  direction    MessageDirection
+  type         String
+  status       String
+  payload      Json
+  waMessageId  String?
+  createdAt    DateTime         @default(now())
+
+  @@index([mobileNumber, createdAt])
+  @@map("message_logs")
+}

@@ -1,0 +1,24 @@
+{
+  "name": "uttarakhand-bot",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:bot": "pnpm --filter bot dev",
+    "build:bot": "pnpm --filter bot build",
+    "start:bot": "pnpm --filter bot start",
+    "dev:web": "pnpm --filter web dev",
+    "build:web": "pnpm --filter web build",
+    "start:web": "pnpm --filter web start",
+    "dev:admin": "pnpm --filter admin dev",
+    "build:admin": "pnpm --filter admin build",
+    "start:admin": "pnpm --filter admin start",
+    "dev:all": "pnpm --parallel --filter bot --filter web --filter admin run dev",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "@prisma/engines", "@prisma/client", "prisma"]
+  }
+}

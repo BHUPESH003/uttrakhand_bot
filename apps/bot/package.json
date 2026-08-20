@@ -1,0 +1,25 @@
+{
+  "name": "bot",
+  "private": true,
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx src/flow/engine.test.ts"
+  },
+  "dependencies": {
+    "db": "workspace:*",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.12.1",
+    "types": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}
