@@ -24,11 +24,15 @@ if ! command -v node >/dev/null 2>&1 || [ "$(node -v | sed 's/^v//;s/\..*//')" -
   apt-get install -y nodejs
 fi
 
-if ! command -v pnpm >/dev/null 2>&1; then
-  log "enabling pnpm via corepack"
-  corepack enable
-  corepack prepare pnpm@latest --activate
-fi
+log "enabling pnpm via corepack, pinned to the version in package.json"
+corepack enable
+# `pnpm@latest` would drift onto whatever major is newest today — it
+# already once meant pnpm 11, which requires Node 22.13+ (uses
+# node:sqlite) and crashes on the Node 20 installed above. `corepack
+# install` instead reads the exact version pinned in the repo's own
+# package.json ("packageManager" field), so VM and local dev always agree
+# and this can't silently break again when a new pnpm major ships.
+(cd "$REPO_ROOT" && corepack install)
 
 NODE_BIN="$(command -v node)"
 PNPM_BIN="$(command -v pnpm)"
