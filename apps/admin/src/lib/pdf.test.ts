@@ -20,7 +20,7 @@ import type { CertificateApplication } from "db";
 process.env.DATABASE_URL ??= "postgresql://test:test@localhost:5432/test";
 process.env.ADMIN_PASSWORD ??= "test-password";
 process.env.INTERNAL_API_SECRET ??= "test-internal-secret";
-process.env.BOT_INTERNAL_URL ??= "http://localhost:3000";
+process.env.BOT_INTERNAL_URL ??= "http://localhost:3001";
 process.env.ADMIN_PUBLIC_URL ??= "http://localhost:3002";
 
 function baseApplication(overrides: Partial<CertificateApplication>): CertificateApplication {

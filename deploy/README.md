@@ -1,16 +1,24 @@
 # Deploying to production
 
 Architecture: `apps/web` on Vercel, `apps/bot` + `apps/admin` on one VM
-behind nginx, one shared Postgres reachable from both (Neon recommended —
-see "Database" below). This directory automates the VM side; Vercel's own
-git integration handles `apps/web`.
+behind nginx (sharing a single domain, split by path), one shared Postgres
+reachable from both (Neon recommended — see "Database" below). This
+directory automates the VM side; Vercel's own git integration handles
+`apps/web`.
 
 ```
 apps/web    -> Vercel (git-connected, auto-deploys on push)
-apps/bot    -> VM, systemd unit uttarakhand-bot,   nginx -> BOT_DOMAIN
-apps/admin  -> VM, systemd unit uttarakhand-admin, nginx -> ADMIN_DOMAIN
+apps/bot    -> VM, systemd unit uttarakhand-bot,   nginx -> DOMAIN/
+apps/admin  -> VM, systemd unit uttarakhand-admin, nginx -> DOMAIN/admin
 Postgres    -> Neon (or any reachable Postgres — just a DATABASE_URL)
 ```
+
+Single domain, split by path, rather than two subdomains: `apps/admin`'s
+`next.config.ts` sets `basePath: "/admin"` in production builds, and
+`deploy/nginx/app.conf.template` routes `/admin/*` to it and everything
+else to the bot. If you'd rather use two subdomains instead (no basePath,
+one nginx server block per domain), that's a simpler setup — this guide
+just documents the single-domain path this repo is wired for.
 
 **Why not `apps/admin` on Vercel too:** it writes generated certificate
 PDFs to `public/certificates/` on the local filesystem at request time.
@@ -27,8 +35,8 @@ to object storage (S3/R2/Vercel Blob) if you want it on Vercel anyway.
   ports 80/443 open in whatever firewall/security-group sits in front of it
   (that part is provider-specific — these scripts don't touch cloud
   firewall rules).
-- Two DNS names (e.g. `bot.yourdomain.com`, `admin.yourdomain.com`) you can
-  point at that VM's IP.
+- One DNS name (e.g. `yourdomain.com`) you can point at that VM's IP —
+  both apps share it, split by path (see above).
 - A Postgres `DATABASE_URL` reachable from both the VM and Vercel (Neon's
   **pooled** connection string — see below).
 - Real values for every app's `.env.example` (WhatsApp token, admin
@@ -64,10 +72,11 @@ DATABASE_URL='<neon-pooled-url>' pnpm --filter db seed   # optional sample data
 **2. VM: clone + bootstrap**
 ```bash
 ssh you@your-vm
-git clone <your-repo-url> /opt/uttarakhand-bot
-cd /opt/uttarakhand-bot
+sudo mkdir /uttarakhand-bot && sudo chown "$(whoami)" /uttarakhand-bot
+git clone <your-repo-url> /uttarakhand-bot
+cd /uttarakhand-bot
 cp deploy/.env.deploy.example deploy/.env.deploy
-nano deploy/.env.deploy   # fill in real domains/ports/email
+nano deploy/.env.deploy   # fill in the real domain/ports/email
 
 sudo ./deploy/scripts/01-vm-bootstrap.sh
 ```
@@ -83,8 +92,9 @@ cp apps/admin/.env.example apps/admin/.env.local  && nano apps/admin/.env.local
 Fill in real values — `INTERNAL_API_SECRET` must be byte-for-byte
 identical across `apps/bot`, `apps/admin`, and `apps/web`. `WEB_FORM_URL`
 (bot's env) is your Vercel URL from step 5. `ADMIN_PUBLIC_URL` (admin's
-env) is `https://<ADMIN_DOMAIN>` from `deploy/.env.deploy` — it gets baked
-into every generated certificate's public URL.
+env) is `https://<DOMAIN>/admin` (note the `/admin` — this app is
+reverse-proxied at that path, not the domain root) — it gets baked into
+every generated certificate's public URL.
 
 **4. First deploy of each VM app**
 ```bash
@@ -104,7 +114,7 @@ failing loudly with the `journalctl` command to run if it doesn't.
   pnpm --filter types build && pnpm --filter db build && pnpm --filter theme build && pnpm --filter web build
   ```
 - Add env vars in the project settings (or use the script below):
-  `DATABASE_URL`, `BOT_INTERNAL_URL` (`https://<BOT_DOMAIN>`),
+  `DATABASE_URL`, `BOT_INTERNAL_URL` (`https://<DOMAIN>`),
   `INTERNAL_API_SECRET`.
 - Deploy. Copy the resulting URL into `apps/bot/.env`'s `WEB_FORM_URL`,
   then re-run `sudo ./deploy/scripts/02-deploy-bot.sh` on the VM to pick it up.
@@ -120,21 +130,21 @@ questions interactively — that's expected. The script then pushes every
 var from that file into Vercel's production environment and deploys.
 
 **6. nginx + TLS**
-Point `BOT_DOMAIN` and `ADMIN_DOMAIN`'s DNS A records at the VM's IP
-*before* this step — Let's Encrypt's challenge needs them to already
-resolve.
+Point `DOMAIN`'s DNS A record at the VM's IP *before* this step — Let's
+Encrypt's challenge needs it to already resolve.
 ```bash
 sudo ./deploy/scripts/04-setup-nginx-tls.sh
 ```
-Installs both reverse-proxy configs, then runs `certbot --nginx` to
-obtain certificates and add the HTTPS redirect. Certbot installs its own
-renewal timer — nothing further to do for renewals.
+Installs the reverse-proxy config (bot at `/`, admin at `/admin`), then
+runs `certbot --nginx` to obtain a certificate and add the HTTPS redirect.
+Certbot installs its own renewal timer — nothing further to do for
+renewals.
 
 **7. Register the real webhook with Meta** (replaces the old ngrok URL)
 ```bash
 curl -X POST "https://graph.facebook.com/v21.0/{APP_ID}/subscriptions" \
   -d "object=whatsapp_business_account" \
-  -d "callback_url=https://<BOT_DOMAIN>/webhook" \
+  -d "callback_url=https://<DOMAIN>/webhook" \
   -d "verify_token={VERIFY_TOKEN}" \
   -d "fields=messages" \
   -d "access_token={APP_ID}|{APP_SECRET}"

@@ -116,11 +116,11 @@ Recorded as a `danger` entry in matha, then retired once verified fixed.
 docker compose up -d                        # local Postgres (repo root)
 cp apps/web/.env.example apps/web/.env.local
 pnpm install
-pnpm dev:bot     # :3000
-pnpm dev:web     # :3001
+pnpm dev:bot     # :3001
+pnpm dev:web     # :3000
 ```
 
-Set `WEB_FORM_URL=http://localhost:3001` in `apps/bot/.env` so the bot's CTA
+Set `WEB_FORM_URL=http://localhost:3000` in `apps/bot/.env` so the bot's CTA
 button points at the local web app.
 
 ## Full-loop test

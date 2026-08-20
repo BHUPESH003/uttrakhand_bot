@@ -33,7 +33,7 @@ const envSchema = z.object({
   // servers fetch it directly, it's never uploaded from this server.
   BANNER_IMAGE_URL: z.string().url("BANNER_IMAGE_URL must be a valid URL"),
 
-  PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.coerce.number().int().positive().default(3001),
 
   // Read directly by packages/db's PrismaClient too (same process env) —
   // validated here as well so the bot fails fast on boot instead of on the

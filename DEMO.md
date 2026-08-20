@@ -9,8 +9,8 @@ while getting it working end to end.
 Three apps, one shared Postgres, two shared packages:
 
 ```
-apps/bot    (Fastify, :3000)  WhatsApp Cloud API webhook + conversation flow
-apps/web    (Next.js, :3001)  the "fill your application" form, reached via a WhatsApp link
+apps/bot    (Fastify, :3001)  WhatsApp Cloud API webhook + conversation flow
+apps/web    (Next.js, :3000)  the "fill your application" form, reached via a WhatsApp link
 apps/admin  (Next.js, :3002)  approval dashboard for government staff
 
 packages/db     Prisma client + typed query functions, shared by all three
@@ -63,7 +63,7 @@ state regardless, since the notification is best-effort.
 | `apps/web/.env.local` | `DATABASE_URL`, `BOT_INTERNAL_URL`, `INTERNAL_API_SECRET` | |
 | `apps/admin/.env.local` | `DATABASE_URL`, `ADMIN_PASSWORD`, `INTERNAL_API_SECRET`, `BOT_INTERNAL_URL`, `ADMIN_PUBLIC_URL` | `ADMIN_PUBLIC_URL` must be a public URL too — it's baked into `certificatePdfPath` so WhatsApp can fetch the PDF. |
 
-`BOT_INTERNAL_URL` stays `http://localhost:3000` even in the tunneled demo —
+`BOT_INTERNAL_URL` stays `http://localhost:3001` even in the tunneled demo —
 admin calls the bot server-to-server on the same machine, no tunnel needed
 for that hop.
 
@@ -86,7 +86,7 @@ scripts that automate it.
 
 ```bash
 ngrok start --all --config ~/.config/ngrok/ngrok.yml --config ./ngrok.yml
-# (a 3-tunnel ngrok.yml for ports 3000/3001/3002 — see below)
+# (a 3-tunnel ngrok.yml for ports 3001/3000/3002 — see below)
 curl -s http://127.0.0.1:4040/api/tunnels   # get the current public URLs
 ```
 
@@ -94,8 +94,8 @@ curl -s http://127.0.0.1:4040/api/tunnels   # get the current public URLs
 # ngrok.yml
 version: "3"
 tunnels:
-  bot:   { proto: http, addr: 3000 }
-  web:   { proto: http, addr: 3001 }
+  bot:   { proto: http, addr: 3001 }
+  web:   { proto: http, addr: 3000 }
   admin: { proto: http, addr: 3002 }
 ```
 

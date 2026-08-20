@@ -33,7 +33,7 @@ load_env() {
   source "$env_file"
   set +a
 
-  local required=(BOT_DOMAIN ADMIN_DOMAIN BOT_PORT ADMIN_PORT CERTBOT_EMAIL SERVICE_USER GIT_BRANCH)
+  local required=(DOMAIN BOT_PORT ADMIN_PORT CERTBOT_EMAIL SERVICE_USER GIT_BRANCH)
   local missing=()
   for var in "${required[@]}"; do
     [ -n "${!var:-}" ] || missing+=("$var")

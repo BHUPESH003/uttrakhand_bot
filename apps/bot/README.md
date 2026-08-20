@@ -21,7 +21,7 @@ Then fill in `.env` (in this `apps/bot/` directory):
 - `WEB_FORM_URL` / `BANNER_IMAGE_URL` — not used by the echo yet, but
   `config.ts` validates them now so phase 2 doesn't need new setup. Any
   valid URL works for now (see `.env.example`).
-- `PORT` — defaults to `3000`.
+- `PORT` — defaults to `3001`.
 
 Missing or invalid values throw a clear error listing exactly what's wrong
 when the server starts — check the terminal output.
@@ -36,14 +36,14 @@ pnpm dev:bot
 ```
 
 This runs `apps/bot` with `tsx watch`, so it restarts on file changes. You
-should see `Bot listening on http://0.0.0.0:3000` (or your `PORT`).
+should see `Bot listening on http://0.0.0.0:3001` (or your `PORT`).
 
 ## 3. Expose it with ngrok + register the webhook
 
 Meta needs to reach your local server over HTTPS, so tunnel it:
 
 ```bash
-ngrok http 3000
+ngrok http 3001
 ```
 
 Copy the `https://....ngrok-free.app` URL it prints.
