@@ -35,7 +35,7 @@ systemctl restart uttarakhand-admin
 
 log "waiting for it to answer on :$ADMIN_PORT"
 for _ in $(seq 1 15); do
-  code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$ADMIN_PORT/admin/login")"
+  code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$ADMIN_PORT/admin/login/")"
   if [ "$code" = "200" ]; then
     log "admin is up"
     exit 0

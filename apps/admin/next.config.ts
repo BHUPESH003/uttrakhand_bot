@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
   // deploy build without needing a separate flag.
   basePath: process.env.NODE_ENV === "production" ? "/admin" : "",
 
+  // Without this, visiting the bare basePath root (just "/admin", no
+  // trailing slash) infinite-loops: Next's root route wants a trailing
+  // slash internally to resolve under a basePath, but the default
+  // trailingSlash:false normalizer immediately strips it back off, so
+  // "/admin" and "/admin/" redirect into each other forever. Doesn't
+  // affect static files (public/certificates/*.pdf etc.) — Next never
+  // appends a trailing slash to extension-bearing paths.
+  trailingSlash: process.env.NODE_ENV === "production",
+
   // pdfkit's fontkit dependency ships a bundle that isn't compatible with
   // Turbopack's RSC bundling (it references an @swc/helpers export that
   // doesn't exist post-bundle) — opt it out and let Node's native require
