@@ -25,12 +25,15 @@ function isConverseResponse(body: unknown): body is AiConverseResponse {
 }
 
 export async function converseWithAi(request: AiConverseRequest): Promise<AiConverseResponse> {
+  const url = `${config.AI_SERVICE_URL}/v1/converse`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
+  console.log(`[ai-chat] -> POST ${url}`, JSON.stringify(request));
+
   let response: Response;
   try {
-    response = await fetch(`${config.AI_SERVICE_URL}/v1/converse`, {
+    response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -50,6 +53,7 @@ export async function converseWithAi(request: AiConverseRequest): Promise<AiConv
   }
 
   const body: unknown = await response.json().catch(() => undefined);
+  console.log(`[ai-chat] <- ${response.status} ${JSON.stringify(body)}`);
 
   if (!response.ok) {
     throw new AiServiceError(`AI service returned ${response.status}`);
