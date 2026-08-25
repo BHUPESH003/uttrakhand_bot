@@ -25,20 +25,25 @@ const en = {
   proceed: "✅ Proceed", // reply button title, limit 20
   opt_out: "🚫 Opt Out", // reply button title, limit 20
 
-  language_prompt: "🌐 *Select Your Language*\nभाषा चुनें",
+  language_prompt: "🌐 *Select Your Language*\n\nभाषा चुनें",
   lang_en: "English", // reply button title, limit 20
   lang_hi: "हिंदी", // reply button title, limit 20
 
-  main_menu_body: "📋 *Main Menu*\nHow can we assist you today?",
-  main_menu_button: "Menu", // list button text, limit 20
-  menu_apply: "📝 Apply for Certificate", // list row title, limit 24
-  menu_track: "🔍 Track Status", // list row title, limit 24
-  menu_download: "📥 Download Certificate", // list row title, limit 24
+  // Main menu is now two messages: Apply/Track/Download as one-tap reply
+  // buttons (main_menu_body), everything else in a list right after
+  // (main_menu_more_body) — see flow/definition.ts's MAIN_MENU.onEnter.
+  main_menu_body: "📋 *Main Menu*\n\nHow can we assist you today?",
+  menu_apply_button: "📝 Apply Certificate", // reply button title, limit 20
+  menu_track: "🔍 Track Status", // reply button title, limit 20 (also reused as a button on the submission-confirmation message — see routes/internal.ts)
+  menu_download_button: "📥 Get Certificate", // reply button title, limit 20
+  main_menu_more_body: "🔧 *More Options*",
+  main_menu_more_button: "More Options", // list button text, limit 20
   menu_help: "❓ Help & Support", // list row title, limit 24
   menu_chat: "💬 Chat with Us", // list row title, limit 24
   menu_change_language: "🌐 Change Language", // list row title, limit 24
 
-  apply_choose_body: "📝 *Certificate Application*\nWhich certificate would you like to apply for?",
+  apply_choose_body:
+    "📝 *Certificate Application*\nWhich certificate would you like to apply for?",
   // No emoji here on purpose — a celebratory icon next to Birth and a
   // solemn one next to Death would read as a tonal mismatch either way.
   birth_certificate: "Birth Certificate", // reply button title, limit 20
@@ -58,8 +63,10 @@ const en = {
 
   back_to_menu: "🔙 Back to Main Menu", // reply button title, limit 20 (exactly at it)
 
-  track_ask_body: "🔍 *Track Application Status*\nPlease enter your application reference/token number below.",
-  track_result_found: "✅ *Application Found*\nReference: *{{reference}}*\nStatus: {{status}}",
+  track_ask_body:
+    "🔍 *Track Application Status*\nPlease enter your application reference/token number below.",
+  track_result_found:
+    "✅ *Application Found*\nReference: *{{reference}}*\nStatus: {{status}}",
   track_result_not_found:
     "❌ We couldn't find any application with reference *{{reference}}*.\nPlease double-check the number and try again.",
   status_submitted: "🟡 Submitted",
@@ -77,10 +84,11 @@ const en = {
   opted_out_body:
     "🙏 You've opted out of this service. We won't send further messages.\n\nSend us any message anytime to start again.",
 
-  fallback_body: "🤔 Sorry, I didn't quite understand that. Here's the menu again:",
+  fallback_body:
+    "🤔 Sorry, I didn't quite understand that. Here's the menu again:",
 
   ai_chat_intro:
-    "🤖 *You're now chatting with an automated assistant.*\nAsk me anything about certificate services and I'll do my best to help. Tap *Back to Main Menu* anytime to return to the regular menu.",
+    "🤖 *You're now chatting with an automated assistant.*\n\nAsk me anything about certificate services and I'll do my best to help. Tap *Back to Main Menu* anytime to return to the regular menu.",
   ai_chat_error_body:
     "🤔 Sorry, I'm having trouble responding right now. Please try again in a moment, or head back to the menu.",
 };
@@ -96,15 +104,17 @@ const hi: Record<keyof typeof en, string> = {
   lang_hi: "हिंदी",
 
   main_menu_body: "📋 *मुख्य मेनू*\nआज हम आपकी क्या मदद कर सकते हैं?",
-  main_menu_button: "मेनू",
-  menu_apply: "📝 प्रमाणपत्र हेतु आवेदन", // exactly 24 — verified via script, not by eye
+  menu_apply_button: "📝 प्रमाणपत्र आवेदन",
   menu_track: "🔍 स्थिति ट्रैक करें",
-  menu_download: "📥 प्रमाणपत्र डाउनलोड",
+  menu_download_button: "📥 प्रमाणपत्र लें",
+  main_menu_more_body: "🔧 *अन्य विकल्प*",
+  main_menu_more_button: "अन्य विकल्प",
   menu_help: "❓ सहायता और समर्थन",
   menu_chat: "💬 हमसे चैट करें",
   menu_change_language: "🌐 भाषा बदलें",
 
-  apply_choose_body: "📝 *प्रमाणपत्र आवेदन*\nआप किस प्रमाणपत्र के लिए आवेदन करना चाहते हैं?",
+  apply_choose_body:
+    "📝 *प्रमाणपत्र आवेदन*\nआप किस प्रमाणपत्र के लिए आवेदन करना चाहते हैं?",
   birth_certificate: "जन्म प्रमाणपत्र",
   death_certificate: "मृत्यु प्रमाणपत्र",
   domicile_certificate: "अधिवास प्रमाणपत्र",
@@ -122,8 +132,10 @@ const hi: Record<keyof typeof en, string> = {
 
   back_to_menu: "🔙 मुख्य मेनू",
 
-  track_ask_body: "🔍 *आवेदन स्थिति ट्रैक करें*\nकृपया अपना आवेदन संदर्भ/टोकन नंबर नीचे दर्ज करें।",
-  track_result_found: "✅ *आवेदन मिल गया*\nसंदर्भ: *{{reference}}*\nस्थिति: {{status}}",
+  track_ask_body:
+    "🔍 *आवेदन स्थिति ट्रैक करें*\nकृपया अपना आवेदन संदर्भ/टोकन नंबर नीचे दर्ज करें।",
+  track_result_found:
+    "✅ *आवेदन मिल गया*\nसंदर्भ: *{{reference}}*\nस्थिति: {{status}}",
   track_result_not_found:
     "❌ हमें संदर्भ *{{reference}}* वाला कोई आवेदन नहीं मिला।\nकृपया नंबर जांचकर पुनः प्रयास करें।",
   status_submitted: "🟡 प्रस्तुत",
@@ -141,7 +153,8 @@ const hi: Record<keyof typeof en, string> = {
   opted_out_body:
     "🙏 आपने इस सेवा से बाहर निकलने का विकल्प चुना है। हम आगे कोई संदेश नहीं भेजेंगे।\n\nफिर से शुरू करने के लिए कभी भी हमें कोई संदेश भेजें।",
 
-  fallback_body: "🤔 क्षमा करें, मुझे यह ठीक से समझ नहीं आया। यहां मेनू फिर से है:",
+  fallback_body:
+    "🤔 क्षमा करें, मुझे यह ठीक से समझ नहीं आया। यहां मेनू फिर से है:",
 
   ai_chat_intro:
     "🤖 *आप अभी एक स्वचालित सहायक से बात कर रहे हैं।*\nप्रमाणपत्र सेवाओं से जुड़ा कोई भी सवाल पूछें, मैं मदद करने की पूरी कोशिश करूंगा। मुख्य मेनू पर लौटने के लिए कभी भी *Back to Main Menu* दबाएं।",

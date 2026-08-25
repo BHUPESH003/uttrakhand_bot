@@ -102,17 +102,14 @@ async function main() {
   await handleIncomingMessage(replyMsg(user, "proceed"), client);
   assert.deepEqual(buttonIds(last()), ["lang_en", "lang_hi"]);
 
-  // 3. Pick English -> MAIN_MENU (list with 5 rows).
+  // 3. Pick English -> MAIN_MENU: Apply/Track/Download as reply buttons,
+  // then Help/Chat/Change Language as a list right after.
   await handleIncomingMessage(replyMsg(user, "lang_en"), client);
+  const mainMenuButtons = client.calls[client.calls.length - 2]!;
+  assert.equal(mainMenuButtons.interactive.type, "button");
+  assert.deepEqual(buttonIds(mainMenuButtons), ["menu_apply", "menu_track", "menu_download"]);
   assert.equal(last().interactive.type, "list");
-  assert.deepEqual(listRowIds(last()), [
-    "menu_apply",
-    "menu_track",
-    "menu_download",
-    "menu_help",
-    "menu_chat",
-    "menu_change_language",
-  ]);
+  assert.deepEqual(listRowIds(last()), ["menu_help", "menu_chat", "menu_change_language"]);
 
   // 4. Change language mid-flow, typed as free text from MAIN_MENU itself
   // (rather than tapping the "Change Language" row) -> LANGUAGE buttons.
@@ -124,7 +121,10 @@ async function main() {
   assert.deepEqual(buttonIds(last()), ["lang_en", "lang_hi"]);
   await handleIncomingMessage(replyMsg(user, "lang_hi"), client);
   assert.equal(last().interactive.type, "list");
-  assert.match(last().interactive.body.text, /आज हम आपकी क्या मदद कर सकते हैं/);
+  assert.match(
+    client.calls[client.calls.length - 2]!.interactive.body.text,
+    /आज हम आपकी क्या मदद कर सकते हैं/,
+  );
 
   // 5. Change language also works from a state that isn't MAIN_MENU, and
   // the English keyword still matches even while the UI is in Hindi — this
@@ -206,10 +206,11 @@ async function main() {
   assert.equal(client.calls[beforeGuard + 1]!.type, "image");
   assert.deepEqual(buttonIds(last()), ["proceed", "opt_out"]); // still WELCOME, not LANGUAGE
 
-  // 12. Unrecognized free text at MAIN_MENU triggers fallback + re-shows the menu.
+  // 12. Unrecognized free text at MAIN_MENU triggers fallback + re-shows the
+  // menu (now two messages: buttons, then list).
   const before = client.calls.length;
   await handleIncomingMessage(textMsg(user, "asdf gibberish"), client);
-  assert.equal(client.calls.length - before, 2);
+  assert.equal(client.calls.length - before, 3);
   assert.equal(client.calls[before]!.type, "text");
   assert.match(textOf(client.calls[before]!), /didn.t.{0,10}understand/);
   assert.equal(last().interactive.type, "list");
@@ -353,7 +354,8 @@ async function main() {
     throw new Error("network down");
   }) as typeof fetch;
   await handleIncomingMessage(textMsg(user, "are you there?"), client);
-  const fallbackCall = client.calls[client.calls.length - 2]!;
+  // AI fallback button, then MAIN_MENU's own two messages (buttons + list).
+  const fallbackCall = client.calls[client.calls.length - 3]!;
   assert.equal(fallbackCall.interactive.type, "button");
   assert.match(fallbackCall.interactive.body.text, /trouble responding/);
   assert.equal(last().interactive.type, "list"); // handed back to MAIN_MENU

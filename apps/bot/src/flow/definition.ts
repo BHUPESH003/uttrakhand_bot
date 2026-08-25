@@ -183,17 +183,27 @@ export const flowStates: Record<string, FlowState> = {
 
   MAIN_MENU: {
     key: MAIN_MENU_STATE_KEY,
+    // Two messages: the three most-used actions as one-tap reply buttons
+    // (WhatsApp caps these at 3 — Apply/Track/Download fits exactly),
+    // everything else right after in a list, rather than burying all six
+    // behind one "Menu" tap.
     onEnter: (ctx) => [
       {
-        kind: "sendList",
+        kind: "sendReplyButtons",
         body: ctx.t("main_menu_body"),
-        buttonText: ctx.t("main_menu_button"),
+        buttons: [
+          { id: "menu_apply", title: ctx.t("menu_apply_button") },
+          { id: TRACK_STATUS_ID, title: ctx.t("menu_track") },
+          { id: "menu_download", title: ctx.t("menu_download_button") },
+        ],
+      },
+      {
+        kind: "sendList",
+        body: ctx.t("main_menu_more_body"),
+        buttonText: ctx.t("main_menu_more_button"),
         sections: [
           {
             rows: [
-              { id: "menu_apply", title: ctx.t("menu_apply") },
-              { id: TRACK_STATUS_ID, title: ctx.t("menu_track") },
-              { id: "menu_download", title: ctx.t("menu_download") },
               { id: "menu_help", title: ctx.t("menu_help") },
               { id: "menu_chat", title: ctx.t("menu_chat") },
               {
