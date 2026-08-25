@@ -37,9 +37,12 @@ export async function POST(request: Request) {
 
   // Best-effort: the applicant still sees their reference number on this
   // page even if the WhatsApp confirmation fails to send (e.g. outside the
-  // 24h window) — this should never block the response.
+  // 24h window) — this should never block the response. Still logged
+  // (rather than silently swallowed) so a wrong BOT_INTERNAL_URL or a
+  // stale INTERNAL_API_SECRET shows up in Vercel's function logs instead
+  // of just looking like "the message never arrived" with no trace of why.
   try {
-    await fetch(`${process.env.BOT_INTERNAL_URL}/internal/notify-submitted`, {
+    const res = await fetch(`${process.env.BOT_INTERNAL_URL}/internal/notify-submitted`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,8 +50,13 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({ applicationId: application.id }),
     });
-  } catch {
-    // Bot service unreachable — nothing more to do here.
+    if (!res.ok) {
+      console.error(
+        `notify-submitted failed: ${res.status} ${res.statusText} — ${await res.text().catch(() => "")}`,
+      );
+    }
+  } catch (err) {
+    console.error("notify-submitted request failed", err);
   }
 
   return NextResponse.json({ referenceNumber: application.referenceNumber });
