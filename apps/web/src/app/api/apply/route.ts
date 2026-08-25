@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createApplication, attachApplicationToToken } from "db";
-import { birthFormSchema, deathFormSchema } from "@/schema";
+import { birthFormSchema, deathFormSchema, domicileFormSchema } from "@/schema";
 import { resolveValidToken } from "@/token";
 
 export async function POST(request: Request) {
@@ -14,7 +14,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Token missing or expired" }, { status: 400 });
   }
 
-  const schema = tokenRow.service === "BIRTH" ? birthFormSchema : deathFormSchema;
+  const schema =
+    tokenRow.service === "BIRTH"
+      ? birthFormSchema
+      : tokenRow.service === "DEATH"
+        ? deathFormSchema
+        : domicileFormSchema;
   const parsed = schema.safeParse(body.formData);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid form data" }, { status: 400 });

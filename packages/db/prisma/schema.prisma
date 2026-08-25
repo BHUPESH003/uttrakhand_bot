@@ -17,6 +17,7 @@ datasource db {
 enum CertificateType {
   BIRTH
   DEATH
+  DOMICILE
 }
 
 enum ApplicationStatus {

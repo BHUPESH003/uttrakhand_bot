@@ -30,6 +30,7 @@ const en = {
 
   birthFormTitle: "Birth Certificate Application",
   deathFormTitle: "Death Certificate Application",
+  domicileFormTitle: "Domicile Certificate Application",
 
   required: "This field is required",
 } as const;
@@ -56,6 +57,7 @@ const hi: Record<keyof typeof en, string> = {
 
   birthFormTitle: "जन्म प्रमाणपत्र आवेदन",
   deathFormTitle: "मृत्यु प्रमाणपत्र आवेदन",
+  domicileFormTitle: "अधिवास प्रमाणपत्र आवेदन",
 
   required: "यह फ़ील्ड आवश्यक है",
 };

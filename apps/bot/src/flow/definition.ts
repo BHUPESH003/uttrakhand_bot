@@ -93,10 +93,12 @@ export function matchGlobalTextCommand(text: string): GlobalTextCommand | null {
 const SERVICE_SLUG: Record<Service, string> = {
   BIRTH: "birth",
   DEATH: "death",
+  DOMICILE: "domicile",
 };
 const SERVICE_COPY_KEY = {
   BIRTH: "birth_certificate",
   DEATH: "death_certificate",
+  DOMICILE: "domicile_certificate",
 } as const;
 
 /** How long a handoff link stays valid before the web form should refuse it. */
@@ -226,6 +228,7 @@ export const flowStates: Record<string, FlowState> = {
         buttons: [
           { id: "service_birth", title: ctx.t("birth_certificate") },
           { id: "service_death", title: ctx.t("death_certificate") },
+          { id: "service_domicile", title: ctx.t("domicile_certificate") },
         ],
       },
     ],
@@ -236,6 +239,10 @@ export const flowStates: Record<string, FlowState> = {
       }
       if (ctx.message.replyId === "service_death") {
         ctx.session.data.service = "DEATH" satisfies Service;
+        return "APPLY_HANDOFF";
+      }
+      if (ctx.message.replyId === "service_domicile") {
+        ctx.session.data.service = "DOMICILE" satisfies Service;
         return "APPLY_HANDOFF";
       }
       return null;

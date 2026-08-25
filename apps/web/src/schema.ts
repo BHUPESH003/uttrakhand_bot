@@ -22,6 +22,30 @@ const pastOrTodayDate = requiredText.refine(notFutureDate, {
 });
 
 const sexSchema = z.enum(["MALE", "FEMALE", "OTHER"]);
+const genderSchema = z.enum(["MALE", "FEMALE", "TRANSGENDER"]);
+const yesNoSchema = z.enum(["YES", "NO"]);
+const districtSchema = z.enum([
+  "ALMORA",
+  "BAGESHWAR",
+  "CHAMOLI",
+  "CHAMPAWAT",
+  "DEHRADUN",
+  "HARIDWAR",
+  "NAINITAL",
+  "PAURI_GARHWAL",
+  "PITHORAGARH",
+  "RUDRAPRAYAG",
+  "TEHRI_GARHWAL",
+  "UDHAM_SINGH_NAGAR",
+  "UTTARKASHI",
+]);
+const idProofSchema = z.enum(["AADHAAR_CARD", "VOTER_ID", "RATION_CARD", "PAN_CARD"]);
+const residenceProofSchema = z.enum([
+  "LAND_REGISTRY",
+  "ELECTRICITY_BILL",
+  "WATER_BILL",
+  "GRAM_PRADHAN_CERTIFICATE",
+]);
 
 export const birthFormSchema = z.object({
   applicantName: requiredName,
@@ -55,5 +79,26 @@ export const deathFormSchema = z.object({
   deceasedAddress: requiredText,
 });
 
+export const domicileFormSchema = z.object({
+  applicantName: requiredName,
+  fatherHusbandName: requiredName,
+  motherName: requiredName,
+  gender: genderSchema,
+  dob: pastOrTodayDate,
+  district: districtSchema,
+  tehsil: requiredText,
+  villageOrTown: requiredText,
+  fullAddress: requiredText,
+  // No municipal body applies to most rural applicants — optional, unlike every other domicile field.
+  municipalBody: z.string().trim().optional(),
+  patwariCircle: requiredText,
+  stayDurationYears: z.number().int().min(0, "Enter a valid number of years"),
+  ownsLandInUttarakhand: yesNoSchema,
+  educatedInState: yesNoSchema,
+  idProofType: idProofSchema,
+  residenceProofType: residenceProofSchema,
+});
+
 export type BirthFormValues = z.infer<typeof birthFormSchema>;
 export type DeathFormValues = z.infer<typeof deathFormSchema>;
+export type DomicileFormValues = z.infer<typeof domicileFormSchema>;

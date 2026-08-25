@@ -21,7 +21,7 @@ export type Lang = "en" | "hi";
 
 const en = {
   welcome_body:
-    "🙏 *Welcome to Uttarakhand e-Seva*\n_Government of Uttarakhand · WhatsApp Citizen Service_\n\nApply for and track official Birth & Death certificates right here on WhatsApp.\n\nBy continuing, you consent to us using your messages to process your certificate request as per government data-handling guidelines.\n\nTap *Proceed* to continue, or *Opt Out* if you'd rather not use this service.",
+    "🙏 *Welcome to Uttarakhand e-Seva*\n_Government of Uttarakhand · WhatsApp Citizen Service_\n\nApply for and track official Birth, Death & Domicile certificates right here on WhatsApp.\n\nBy continuing, you consent to us using your messages to process your certificate request as per government data-handling guidelines.\n\nTap *Proceed* to continue, or *Opt Out* if you'd rather not use this service.",
   proceed: "✅ Proceed", // reply button title, limit 20
   opt_out: "🚫 Opt Out", // reply button title, limit 20
 
@@ -42,6 +42,7 @@ const en = {
   // solemn one next to Death would read as a tonal mismatch either way.
   birth_certificate: "Birth Certificate", // reply button title, limit 20
   death_certificate: "Death Certificate", // reply button title, limit 20
+  domicile_certificate: "Domicile Certificate", // reply button title, limit 20 (exactly at it)
 
   apply_handoff_header: "📄 Certificate Application", // cta_url header, limit 60
   apply_handoff_body:
@@ -70,7 +71,7 @@ const en = {
   download_ready_body: "✅ *Your certificate is ready!* Here it is 👇",
 
   help_body:
-    "ℹ️ *Help & Support*\n\nThis service lets you:\n• Apply for a Birth or Death certificate\n• Track your application status\n• Download your approved certificate\n\nFor further assistance, please contact your nearest CSC (Common Service Centre).",
+    "ℹ️ *Help & Support*\n\nThis service lets you:\n• Apply for a Birth, Death, or Domicile certificate\n• Track your application status\n• Download your approved certificate\n\nFor further assistance, please contact your nearest CSC (Common Service Centre).",
 
   opted_out_body:
     "🙏 You've opted out of this service. We won't send further messages.\n\nSend us any message anytime to start again.",
@@ -80,7 +81,7 @@ const en = {
 
 const hi: Record<keyof typeof en, string> = {
   welcome_body:
-    "🙏 *उत्तराखंड ई-सेवा में आपका स्वागत है*\n_उत्तराखंड सरकार · व्हाट्सएप नागरिक सेवा_\n\nयहीं व्हाट्सएप पर जन्म और मृत्यु प्रमाणपत्र के लिए आवेदन करें और स्थिति ट्रैक करें।\n\nजारी रखने पर, आप सरकारी डेटा-प्रबंधन दिशानिर्देशों के अनुसार अपने प्रमाणपत्र अनुरोध को संसाधित करने के लिए हमें अपने संदेशों का उपयोग करने की सहमति देते हैं।\n\nजारी रखने के लिए *Proceed* दबाएं, या इस सेवा का उपयोग न करना चाहें तो *Opt Out* दबाएं।",
+    "🙏 *उत्तराखंड ई-सेवा में आपका स्वागत है*\n_उत्तराखंड सरकार · व्हाट्सएप नागरिक सेवा_\n\nयहीं व्हाट्सएप पर जन्म, मृत्यु और अधिवास प्रमाणपत्र के लिए आवेदन करें और स्थिति ट्रैक करें।\n\nजारी रखने पर, आप सरकारी डेटा-प्रबंधन दिशानिर्देशों के अनुसार अपने प्रमाणपत्र अनुरोध को संसाधित करने के लिए हमें अपने संदेशों का उपयोग करने की सहमति देते हैं।\n\nजारी रखने के लिए *Proceed* दबाएं, या इस सेवा का उपयोग न करना चाहें तो *Opt Out* दबाएं।",
   proceed: "✅ आगे बढ़ें",
   opt_out: "🚫 बाहर निकलें",
 
@@ -99,6 +100,7 @@ const hi: Record<keyof typeof en, string> = {
   apply_choose_body: "📝 *प्रमाणपत्र आवेदन*\nआप किस प्रमाणपत्र के लिए आवेदन करना चाहते हैं?",
   birth_certificate: "जन्म प्रमाणपत्र",
   death_certificate: "मृत्यु प्रमाणपत्र",
+  domicile_certificate: "अधिवास प्रमाणपत्र",
 
   apply_handoff_header: "📄 प्रमाणपत्र आवेदन",
   apply_handoff_body:
@@ -127,7 +129,7 @@ const hi: Record<keyof typeof en, string> = {
   download_ready_body: "✅ *आपका प्रमाणपत्र तैयार है!* यह लीजिए 👇",
 
   help_body:
-    "ℹ️ *सहायता एवं समर्थन*\n\nइस सेवा से आप:\n• जन्म या मृत्यु प्रमाणपत्र के लिए आवेदन कर सकते हैं\n• अपने आवेदन की स्थिति ट्रैक कर सकते हैं\n• अपना स्वीकृत प्रमाणपत्र डाउनलोड कर सकते हैं\n\nअधिक सहायता के लिए अपने नजदीकी सीएससी (कॉमन सर्विस सेंटर) से संपर्क करें।",
+    "ℹ️ *सहायता एवं समर्थन*\n\nइस सेवा से आप:\n• जन्म, मृत्यु या अधिवास प्रमाणपत्र के लिए आवेदन कर सकते हैं\n• अपने आवेदन की स्थिति ट्रैक कर सकते हैं\n• अपना स्वीकृत प्रमाणपत्र डाउनलोड कर सकते हैं\n\nअधिक सहायता के लिए अपने नजदीकी सीएससी (कॉमन सर्विस सेंटर) से संपर्क करें।",
 
   opted_out_body:
     "🙏 आपने इस सेवा से बाहर निकलने का विकल्प चुना है। हम आगे कोई संदेश नहीं भेजेंगे।\n\nफिर से शुरू करने के लिए कभी भी हमें कोई संदेश भेजें।",

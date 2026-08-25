@@ -13,6 +13,7 @@ function parseLang(value: string | undefined): Lang {
 function parseService(value: string | undefined): Service | null {
   if (value === "birth") return "BIRTH";
   if (value === "death") return "DEATH";
+  if (value === "domicile") return "DOMICILE";
   return null;
 }
 

@@ -1,7 +1,7 @@
 /**
- * Self-check for certificate PDF generation — renders one birth and one
- * death certificate against representative form data (including a
- * Devanagari applicant name, to exercise the font-switch path) and asserts
+ * Self-check for certificate PDF generation — renders one birth, one
+ * death, and one domicile certificate against representative form data
+ * (including a Devanagari applicant name, to exercise the font-switch path) and asserts
  * the output is a well-formed, non-trivial PDF. Not a visual/pixel check
  * (no framework for that here) — just enough to catch a crash or a
  * suspiciously empty/broken file before it ships. Run directly:
@@ -90,7 +90,34 @@ async function main() {
     },
   });
 
-  for (const application of [birthApp, deathApp]) {
+  const domicileApp = baseApplication({
+    type: "DOMICILE",
+    // Devanagari name, like the real reference certificate — exercises the
+    // same font-switch path as the death cert above, plus the gender ->
+    // honorific mapping in renderDomicileCertificate.
+    applicantName: "विकास कुमार",
+    reviewedByName: "Shipra Joshi",
+    formData: {
+      fatherHusbandName: "Narendra Kumar",
+      motherName: "Hema Devi",
+      gender: "MALE",
+      dob: "1998-11-20",
+      district: "ALMORA",
+      tehsil: "Bhikiyasain",
+      villageOrTown: "Saure",
+      fullAddress: "Village-Saure, Post-Basot",
+      // municipalBody intentionally omitted — exercises the "ना" fallback
+      // the real certificate shows for a rural address with no municipal body.
+      patwariCircle: "Basot",
+      stayDurationYears: 27,
+      ownsLandInUttarakhand: "YES",
+      educatedInState: "YES",
+      idProofType: "AADHAAR_CARD",
+      residenceProofType: "LAND_REGISTRY",
+    },
+  });
+
+  for (const application of [birthApp, deathApp, domicileApp]) {
     const url = await generateCertificatePdf(application);
     assert.match(url, /\/certificates\/UK-TEST-.+\.pdf$/);
 
@@ -107,7 +134,7 @@ async function main() {
     );
   }
 
-  console.log("ok — birth and death certificate PDFs generated and look well-formed");
+  console.log("ok — birth, death, and domicile certificate PDFs generated and look well-formed");
 }
 
 main().catch((err) => {

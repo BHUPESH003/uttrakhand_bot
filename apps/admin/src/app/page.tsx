@@ -3,7 +3,7 @@ import { listApplications } from "db";
 import type { ApplicationStatus, Service } from "types";
 
 const STATUSES: ApplicationStatus[] = ["SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"];
-const TYPES: Service[] = ["BIRTH", "DEATH"];
+const TYPES: Service[] = ["BIRTH", "DEATH", "DOMICILE"];
 
 const STATUS_BADGE: Record<ApplicationStatus, string> = {
   SUBMITTED: "bg-neutral-100 text-neutral-700",

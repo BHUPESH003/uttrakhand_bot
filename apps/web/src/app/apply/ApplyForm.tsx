@@ -10,13 +10,15 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Lang, Service } from "types";
-import { BIRTH_FORM_FIELDS, DEATH_FORM_FIELDS, type FormFieldDef } from "types";
+import { BIRTH_FORM_FIELDS, DEATH_FORM_FIELDS, DOMICILE_FORM_FIELDS, type FormFieldDef } from "types";
 import { t } from "@/copy";
 import {
   birthFormSchema,
   deathFormSchema,
+  domicileFormSchema,
   type BirthFormValues,
   type DeathFormValues,
+  type DomicileFormValues,
 } from "@/schema";
 
 interface Props {
@@ -26,13 +28,11 @@ interface Props {
   initialName: string;
 }
 
-/** Birth and death certificates have fully disjoint field sets, so each gets its own form rather than one generic renderer fighting a union type. */
+/** Birth, death, and domicile certificates have fully disjoint field sets, so each gets its own form rather than one generic renderer fighting a union type. */
 export function ApplyForm({ service, lang, token, initialName }: Props) {
-  return service === "BIRTH" ? (
-    <BirthApplyForm lang={lang} token={token} initialName={initialName} />
-  ) : (
-    <DeathApplyForm lang={lang} token={token} initialName={initialName} />
-  );
+  if (service === "BIRTH") return <BirthApplyForm lang={lang} token={token} initialName={initialName} />;
+  if (service === "DEATH") return <DeathApplyForm lang={lang} token={token} initialName={initialName} />;
+  return <DomicileApplyForm lang={lang} token={token} initialName={initialName} />;
 }
 
 async function submitApplication(token: string, formData: Record<string, unknown>) {
@@ -259,6 +259,48 @@ function DeathApplyForm({ lang, token, initialName }: Omit<Props, "service">) {
         <input {...register("applicantName")} className={inputClass} type="text" />
       </Field>
       {DEATH_FORM_FIELDS.map((field) => (
+        <DynamicField key={field.key} field={field} lang={lang} register={register} errors={errors} />
+      ))}
+      {submitError && <p className="text-sm text-error">{t(lang, "submitError")}</p>}
+      <button type="submit" disabled={isSubmitting} className={submitButtonClass}>
+        {isSubmitting ? t(lang, "submitting") : t(lang, "submit")}
+      </button>
+    </form>
+  );
+}
+
+function DomicileApplyForm({ lang, token, initialName }: Omit<Props, "service">) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<DomicileFormValues>({
+    resolver: zodResolver(domicileFormSchema),
+    defaultValues: { applicantName: initialName },
+  });
+  const [reference, setReference] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState(false);
+
+  if (reference) return <SuccessScreen lang={lang} reference={reference} />;
+
+  const onSubmit = handleSubmit(async (values) => {
+    setSubmitError(false);
+    const result = await submitApplication(token, values);
+    if (!result) {
+      setSubmitError(true);
+      return;
+    }
+    setReference(result.referenceNumber);
+  });
+
+  return (
+    <form onSubmit={onSubmit} noValidate className={formShellClass}>
+      <h1 className="text-lg font-semibold text-navy-700">{t(lang, "domicileFormTitle")}</h1>
+      <p className="-mt-2 text-xs text-neutral-500">{t(lang, "formSubtitle")}</p>
+      <Field label={t(lang, "applicantName")} error={errors.applicantName}>
+        <input {...register("applicantName")} className={inputClass} type="text" />
+      </Field>
+      {DOMICILE_FORM_FIELDS.map((field) => (
         <DynamicField key={field.key} field={field} lang={lang} register={register} errors={errors} />
       ))}
       {submitError && <p className="text-sm text-error">{t(lang, "submitError")}</p>}
