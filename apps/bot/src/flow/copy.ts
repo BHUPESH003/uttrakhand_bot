@@ -74,8 +74,10 @@ const en = {
   status_approved: "🟢 Approved",
   status_rejected: "🔴 Rejected",
 
-  download_body:
-    "📥 *Download Certificate*\nYour certificate is not available for download yet. Once your application is approved, you will be able to download it here.",
+  download_ask_body:
+    "📥 *Download Certificate*\nPlease enter your application reference/token number below.",
+  download_not_ready_body:
+    "⏳ *Not Ready Yet*\nApplication *{{reference}}* is currently: {{status}}\nYou'll be able to download it here once it's approved.",
   download_ready_body: "✅ *Your certificate is ready!* Here it is 👇",
 
   help_body:
@@ -143,8 +145,10 @@ const hi: Record<keyof typeof en, string> = {
   status_approved: "🟢 स्वीकृत",
   status_rejected: "🔴 अस्वीकृत",
 
-  download_body:
-    "📥 *प्रमाणपत्र डाउनलोड*\nआपका प्रमाणपत्र अभी डाउनलोड के लिए उपलब्ध नहीं है। आवेदन स्वीकृत होने पर, आप इसे यहां डाउनलोड कर सकेंगे।",
+  download_ask_body:
+    "📥 *प्रमाणपत्र डाउनलोड*\nकृपया अपना आवेदन संदर्भ/टोकन नंबर नीचे दर्ज करें।",
+  download_not_ready_body:
+    "⏳ *अभी तैयार नहीं है*\nआवेदन *{{reference}}* अभी: {{status}}\nस्वीकृत होने पर आप इसे यहां डाउनलोड कर सकेंगे।",
   download_ready_body: "✅ *आपका प्रमाणपत्र तैयार है!* यह लीजिए 👇",
 
   help_body:

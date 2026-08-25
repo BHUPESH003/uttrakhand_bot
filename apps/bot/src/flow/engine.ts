@@ -91,10 +91,22 @@ export async function handleIncomingMessage(
   const idleTimedOut = existing !== undefined && idleMinutes > config.SESSION_IDLE_MINUTES;
 
   // No session, or one that's gone idle too long -> ENTRY: (re)register the
-  // number, stash their WhatsApp display name, fall straight into WELCOME.
+  // number, stash their WhatsApp display name, fall straight into WELCOME —
+  // UNLESS this number has consented before (existing.data.consented, set
+  // by WELCOME's "proceed" handler), in which case that consent still
+  // stands and re-asking for it is just friction. Skip straight to
+  // LANGUAGE instead; startFresh's data wipe still applies to everything
+  // else (a stale service/token from a prior flow shouldn't carry over).
   if (!existing || idleTimedOut) {
+    const alreadyConsented = existing?.data.consented === true;
     const session = startFresh(message.from, message, now);
-    await enterState(client, session, message, ENTRY_STATE_KEY);
+    if (alreadyConsented) session.data.consented = true;
+    await enterState(
+      client,
+      session,
+      message,
+      alreadyConsented ? LANGUAGE_STATE_KEY : ENTRY_STATE_KEY,
+    );
     session.updatedAt = new Date();
     await sessionStore.saveSession(session);
     return;
@@ -125,7 +137,9 @@ export async function handleIncomingMessage(
     // from whatever state the session happens to be sitting in.
     nextKey = TRACK_ASK_STATE_KEY;
   } else if (globalCommand === "RESTART") {
-    nextKey = ENTRY_STATE_KEY;
+    // Same consent-skip as the idle/fresh-session branch above — a "hi"
+    // mid-session shouldn't re-ask for consent already given this session.
+    nextKey = session.data.consented === true ? LANGUAGE_STATE_KEY : ENTRY_STATE_KEY;
   } else if (globalCommand === "CHANGE_LANGUAGE" && hasOnboarded) {
     nextKey = LANGUAGE_STATE_KEY;
   } else if (session.currentStateKey === AI_CHAT_STATE_KEY) {

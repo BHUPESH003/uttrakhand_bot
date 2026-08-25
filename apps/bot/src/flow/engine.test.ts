@@ -181,14 +181,14 @@ async function main() {
 
   // 10. Restart, typed as free text ("hi"), works mid-flow — even while
   // TRACK_ASK is expecting a reference number, "hi" is treated as a
-  // restart command, not a (nonsensical) reference lookup.
+  // restart command, not a (nonsensical) reference lookup. `user` already
+  // consented back in step 1, so this skips WELCOME entirely and goes
+  // straight to LANGUAGE — consent given once is never re-asked.
   await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
   await handleIncomingMessage(replyMsg(user, "menu_track"), client);
   await handleIncomingMessage(textMsg(user, "hi"), client);
-  assert.equal(client.calls[client.calls.length - 2]!.type, "image"); // WELCOME banner again
-  assert.deepEqual(buttonIds(last()), ["proceed", "opt_out"]);
+  assert.deepEqual(buttonIds(last()), ["lang_en", "lang_hi"]);
   // Re-onboard so the remaining steps can resume from MAIN_MENU as before.
-  await handleIncomingMessage(replyMsg(user, "proceed"), client);
   await handleIncomingMessage(replyMsg(user, "lang_en"), client);
   assert.equal(last().interactive.type, "list");
 
@@ -223,7 +223,8 @@ async function main() {
   assert.deepEqual(buttonIds(last()), ["proceed", "opt_out"]);
 
   // 14. Idle reset: a session quiet for longer than SESSION_IDLE_MINUTES
-  // restarts at WELCOME instead of resuming mid-flow, even though it never opted out.
+  // restarts mid-flow instead of resuming — but since idleUser already
+  // consented before going idle, it restarts at LANGUAGE, not WELCOME.
   await handleIncomingMessage(textMsg(idleUser, "hi"), client);
   await handleIncomingMessage(replyMsg(idleUser, "proceed"), client);
   await handleIncomingMessage(replyMsg(idleUser, "lang_en"), client);
@@ -235,16 +236,21 @@ async function main() {
     data: { lastInboundAt: new Date(Date.now() - (idleMinutes + 1) * 60_000) },
   });
   await handleIncomingMessage(replyMsg(idleUser, "menu_apply"), client);
-  assert.equal(client.calls[client.calls.length - 2]!.type, "image"); // WELCOME banner again
-  assert.deepEqual(buttonIds(last()), ["proceed", "opt_out"]);
+  assert.deepEqual(buttonIds(last()), ["lang_en", "lang_hi"]); // consent carried over, WELCOME skipped
+  await handleIncomingMessage(replyMsg(idleUser, "lang_en"), client); // re-onboard for later steps
 
-  // 15. Download: nothing ready yet for a user with no applications.
+  // 15. Download now asks for a reference number instead of auto-serving
+  // the caller's most recent application.
   await handleIncomingMessage(replyMsg(user, "menu_download"), client);
-  assert.equal(client.calls[client.calls.length - 2]!.type, "text");
-  assert.match(textOf(client.calls[client.calls.length - 2]!), /not available for download/);
+  assert.equal(last().type, "text");
+  assert.match(textOf(last()), /enter your application reference/);
 
-  // 16. Download: an approved application with a stored PDF sends it. Uses
-  // a fixed, upserted reference number rather than createApplication() —
+  // An unknown reference gets a graceful not-found, same as Track Status.
+  await handleIncomingMessage(textMsg(user, "UK-BIRTH-999999"), client);
+  assert.equal(client.calls[client.calls.length - 2]!.type, "text");
+  assert.match(textOf(client.calls[client.calls.length - 2]!), /couldn't find/);
+
+  // Fixed, upserted reference numbers rather than createApplication() —
   // that helper's generateReferenceNumber is a documented count-based
   // simplification (see packages/db/src/applications.ts) that isn't safe
   // against concurrent writes, which this repeatable test shouldn't rely on.
@@ -268,17 +274,52 @@ async function main() {
       reviewedAt: new Date(),
     },
   });
+
+  // 16. Ownership is enforced: this is a real, APPROVED application with a
+  // PDF — but it belongs to downloadUser, not `user`. Reference numbers are
+  // sequential per type and therefore guessable, so this is the actual
+  // security fix: knowing/guessing a valid reference must not be enough.
+  await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
+  await handleIncomingMessage(replyMsg(user, "menu_download"), client);
+  await handleIncomingMessage(textMsg(user, "UK-TEST-DOWNLOAD-000001"), client);
+  assert.equal(client.calls[client.calls.length - 2]!.type, "text");
+  assert.match(textOf(client.calls[client.calls.length - 2]!), /couldn't find/); // not "here it is"
+  assert.notEqual(last().type, "document");
+
+  // 17. The actual owner can download their own approved certificate.
   await handleIncomingMessage(textMsg(downloadUser, "hi"), client);
   await handleIncomingMessage(replyMsg(downloadUser, "proceed"), client);
   await handleIncomingMessage(replyMsg(downloadUser, "lang_en"), client);
   await handleIncomingMessage(replyMsg(downloadUser, "menu_download"), client);
+  await handleIncomingMessage(textMsg(downloadUser, "UK-TEST-DOWNLOAD-000001"), client);
   assert.equal(client.calls[client.calls.length - 3]!.type, "text");
   assert.match(textOf(client.calls[client.calls.length - 3]!), /certificate is ready/);
   assert.equal(client.calls[client.calls.length - 2]!.type, "document");
   assert.equal(client.calls[client.calls.length - 2]!.document.link, "https://example.com/certs/test.pdf");
   assert.equal(last().interactive.type, "button");
 
-  // 17. "Chat with us" hands the conversation to the external AI service
+  // 18. A reference the caller owns but that isn't approved yet gets a
+  // specific "not ready" message, distinct from the not-found/not-yours case.
+  await prisma.certificateApplication.upsert({
+    where: { referenceNumber: "UK-TEST-DOWNLOAD-PENDING-000001" },
+    create: {
+      referenceNumber: "UK-TEST-DOWNLOAD-PENDING-000001",
+      type: "BIRTH",
+      status: "UNDER_REVIEW",
+      applicantName: "Pending Test",
+      mobileNumber: downloadUser,
+      language: "en",
+      formData: {},
+    },
+    update: { status: "UNDER_REVIEW", mobileNumber: downloadUser, certificatePdfPath: null },
+  });
+  await handleIncomingMessage(replyMsg(downloadUser, "back_to_menu"), client);
+  await handleIncomingMessage(replyMsg(downloadUser, "menu_download"), client);
+  await handleIncomingMessage(textMsg(downloadUser, "UK-TEST-DOWNLOAD-PENDING-000001"), client);
+  assert.equal(client.calls[client.calls.length - 2]!.type, "text");
+  assert.match(textOf(client.calls[client.calls.length - 2]!), /Not Ready Yet/);
+
+  // 19. "Chat with us" hands the conversation to the external AI service
   // (ai-handoff-contract.html). First entry shows the one-time
   // automated-assistant disclosure.
   await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
@@ -326,13 +367,13 @@ async function main() {
   // The AI's own button plus our guaranteed escape hatch, merged into the same block.
   assert.deepEqual(buttonIds(last()), ["sys:apply", "back_to_menu"]);
 
-  // 18. A reserved sys:* id is intercepted, never forwarded to the AI, and
+  // 20. A reserved sys:* id is intercepted, never forwarded to the AI, and
   // routes straight into the matching deterministic menu.
   await handleIncomingMessage(replyMsg(user, "sys:apply"), client);
   assert.equal(last().interactive.type, "button");
   assert.deepEqual(buttonIds(last()), ["service_birth", "service_death", "service_domicile"]);
 
-  // 19. An apply-intent shortcut (the AI already knows the certificate
+  // 21. An apply-intent shortcut (the AI already knows the certificate
   // type) skips the picker entirely and mints a real application-form
   // link — this is the fix for "AI gives steps, we also return the apply
   // form URL" instead of forcing a redundant re-selection.
@@ -346,7 +387,7 @@ async function main() {
   assert.equal(last().interactive.type, "button");
   assert.deepEqual(buttonIds(last()), ["back_to_menu"]);
 
-  // 20. AI service failures fall back gracefully — never a raw error — and
+  // 22. AI service failures fall back gracefully — never a raw error — and
   // hand back to the main menu.
   await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
   await handleIncomingMessage(replyMsg(user, "menu_chat"), client);

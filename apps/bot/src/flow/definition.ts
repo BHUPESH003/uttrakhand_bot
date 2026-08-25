@@ -15,7 +15,6 @@ import { randomUUID } from "node:crypto";
 import {
   createToken,
   getApplicationByReference,
-  getLatestApplicationForNumber,
   type ApplicationStatus,
 } from "db";
 import type { Service } from "types";
@@ -150,7 +149,13 @@ export const flowStates: Record<string, FlowState> = {
       },
     ],
     handleInput: (ctx) => {
-      if (ctx.message.replyId === "proceed") return LANGUAGE_STATE_KEY;
+      if (ctx.message.replyId === "proceed") {
+        // Sticks on session.data, which idle/restart re-entry (engine.ts)
+        // checks before deciding whether to show this consent screen again
+        // — once given, never re-asked for this number.
+        ctx.session.data.consented = true;
+        return LANGUAGE_STATE_KEY;
+      }
       if (ctx.message.replyId === "opt_out") return "OPTED_OUT";
       return null;
     },
@@ -373,17 +378,48 @@ export const flowStates: Record<string, FlowState> = {
     handleInput: () => null,
   },
 
+  // Asks for a reference number rather than auto-serving the caller's most
+  // recent application — mirrors TRACK_ASK/TRACK_RESULT below. DOWNLOAD_RESULT
+  // is where ownership actually gets checked (this state just collects input).
   DOWNLOAD: {
-    key: "DOWNLOAD",
-    onEnter: async (ctx) => {
-      const application = await getLatestApplicationForNumber(
-        ctx.session.userId,
-      );
+    key: DOWNLOAD_STATE_KEY,
+    onEnter: (ctx) => [{ kind: "sendText", text: ctx.t("download_ask_body") }],
+    handleInput: (ctx) => {
+      if (ctx.message.type === "text" && ctx.message.text) {
+        ctx.session.data.downloadReferenceNumber = ctx.message.text;
+        return "DOWNLOAD_RESULT";
+      }
+      return null;
+    },
+  },
 
-      if (
-        application?.status === "APPROVED" &&
-        application.certificatePdfPath
-      ) {
+  DOWNLOAD_RESULT: {
+    key: "DOWNLOAD_RESULT",
+    onEnter: async (ctx) => {
+      const referenceNumber = (
+        (ctx.session.data.downloadReferenceNumber as string) || ""
+      )
+        .trim()
+        .toUpperCase();
+      const application = await getApplicationByReference(referenceNumber);
+
+      // Reference numbers are sequential per type ("UK-BIRTH-000123") and
+      // therefore guessable — without this check, any user could type
+      // someone else's number and download their certificate. A mismatch
+      // gets the exact same "not found" copy as a genuinely unknown
+      // reference (see track_result_not_found reuse below), so an attacker
+      // can't use the response to tell "wrong number" apart from "not
+      // yours" and enumerate valid references that belong to others.
+      const ownedByCaller = application?.mobileNumber === ctx.session.userId;
+
+      if (!application || !ownedByCaller) {
+        return [
+          { kind: "sendText", text: ctx.t("track_result_not_found", { reference: referenceNumber }) },
+          backToMenuButton(ctx),
+        ];
+      }
+
+      if (application.status === "APPROVED" && application.certificatePdfPath) {
         return [
           { kind: "sendText", text: ctx.t("download_ready_body") },
           {
@@ -396,7 +432,13 @@ export const flowStates: Record<string, FlowState> = {
       }
 
       return [
-        { kind: "sendText", text: ctx.t("download_body") },
+        {
+          kind: "sendText",
+          text: ctx.t("download_not_ready_body", {
+            reference: application.referenceNumber,
+            status: statusText(ctx, application.status, application.rejectionReason),
+          }),
+        },
         backToMenuButton(ctx),
       ];
     },
