@@ -48,6 +48,13 @@ const envSchema = z.object({
   // POST /internal/notify-approved. Same value must be set in apps/admin's
   // INTERNAL_API_SECRET.
   INTERNAL_API_SECRET: z.string().min(1, "INTERNAL_API_SECRET is required"),
+
+  // Base URL of the external "Chat with us" AI service — see
+  // flow/aiChat.ts. We POST to `${AI_SERVICE_URL}/v1/converse`.
+  AI_SERVICE_URL: z.string().url("AI_SERVICE_URL must be a valid URL"),
+
+  // Sent as `Authorization: Bearer <token>` on every AI service call.
+  AI_SERVICE_TOKEN: z.string().min(1, "AI_SERVICE_TOKEN is required"),
 });
 
 function loadConfig() {

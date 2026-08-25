@@ -35,6 +35,7 @@ const en = {
   menu_track: "🔍 Track Status", // list row title, limit 24
   menu_download: "📥 Download Certificate", // list row title, limit 24
   menu_help: "❓ Help & Support", // list row title, limit 24
+  menu_chat: "💬 Chat with Us", // list row title, limit 24
   menu_change_language: "🌐 Change Language", // list row title, limit 24
 
   apply_choose_body: "📝 *Certificate Application*\nWhich certificate would you like to apply for?",
@@ -71,12 +72,17 @@ const en = {
   download_ready_body: "✅ *Your certificate is ready!* Here it is 👇",
 
   help_body:
-    "ℹ️ *Help & Support*\n\nThis service lets you:\n• Apply for a Birth, Death, or Domicile certificate\n• Track your application status\n• Download your approved certificate\n\nFor further assistance, please contact your nearest CSC (Common Service Centre).",
+    "ℹ️ *Help & Support*\n\nThis service lets you:\n• Apply for a Birth, Death, or Domicile certificate\n• Track your application status\n• Download your approved certificate\n• Chat with us for other questions\n\nFor further assistance, please contact your nearest CSC (Common Service Centre).",
 
   opted_out_body:
     "🙏 You've opted out of this service. We won't send further messages.\n\nSend us any message anytime to start again.",
 
   fallback_body: "🤔 Sorry, I didn't quite understand that. Here's the menu again:",
+
+  ai_chat_intro:
+    "🤖 *You're now chatting with an automated assistant.*\nAsk me anything about certificate services and I'll do my best to help. Tap *Back to Main Menu* anytime to return to the regular menu.",
+  ai_chat_error_body:
+    "🤔 Sorry, I'm having trouble responding right now. Please try again in a moment, or head back to the menu.",
 };
 
 const hi: Record<keyof typeof en, string> = {
@@ -95,6 +101,7 @@ const hi: Record<keyof typeof en, string> = {
   menu_track: "🔍 स्थिति ट्रैक करें",
   menu_download: "📥 प्रमाणपत्र डाउनलोड",
   menu_help: "❓ सहायता और समर्थन",
+  menu_chat: "💬 हमसे चैट करें",
   menu_change_language: "🌐 भाषा बदलें",
 
   apply_choose_body: "📝 *प्रमाणपत्र आवेदन*\nआप किस प्रमाणपत्र के लिए आवेदन करना चाहते हैं?",
@@ -129,12 +136,17 @@ const hi: Record<keyof typeof en, string> = {
   download_ready_body: "✅ *आपका प्रमाणपत्र तैयार है!* यह लीजिए 👇",
 
   help_body:
-    "ℹ️ *सहायता एवं समर्थन*\n\nइस सेवा से आप:\n• जन्म, मृत्यु या अधिवास प्रमाणपत्र के लिए आवेदन कर सकते हैं\n• अपने आवेदन की स्थिति ट्रैक कर सकते हैं\n• अपना स्वीकृत प्रमाणपत्र डाउनलोड कर सकते हैं\n\nअधिक सहायता के लिए अपने नजदीकी सीएससी (कॉमन सर्विस सेंटर) से संपर्क करें।",
+    "ℹ️ *सहायता एवं समर्थन*\n\nइस सेवा से आप:\n• जन्म, मृत्यु या अधिवास प्रमाणपत्र के लिए आवेदन कर सकते हैं\n• अपने आवेदन की स्थिति ट्रैक कर सकते हैं\n• अपना स्वीकृत प्रमाणपत्र डाउनलोड कर सकते हैं\n• अन्य सवालों के लिए हमसे चैट कर सकते हैं\n\nअधिक सहायता के लिए अपने नजदीकी सीएससी (कॉमन सर्विस सेंटर) से संपर्क करें।",
 
   opted_out_body:
     "🙏 आपने इस सेवा से बाहर निकलने का विकल्प चुना है। हम आगे कोई संदेश नहीं भेजेंगे।\n\nफिर से शुरू करने के लिए कभी भी हमें कोई संदेश भेजें।",
 
   fallback_body: "🤔 क्षमा करें, मुझे यह ठीक से समझ नहीं आया। यहां मेनू फिर से है:",
+
+  ai_chat_intro:
+    "🤖 *आप अभी एक स्वचालित सहायक से बात कर रहे हैं।*\nप्रमाणपत्र सेवाओं से जुड़ा कोई भी सवाल पूछें, मैं मदद करने की पूरी कोशिश करूंगा। मुख्य मेनू पर लौटने के लिए कभी भी *Back to Main Menu* दबाएं।",
+  ai_chat_error_body:
+    "🤔 क्षमा करें, अभी जवाब देने में समस्या आ रही है। कृपया थोड़ी देर बाद पुनः प्रयास करें, या मेनू पर वापस जाएं।",
 };
 
 export const copy = { en, hi };

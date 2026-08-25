@@ -33,6 +33,10 @@ export const ENTRY_STATE_KEY = "WELCOME";
 export const LANGUAGE_STATE_KEY = "LANGUAGE";
 export const MAIN_MENU_STATE_KEY = "MAIN_MENU";
 export const TRACK_ASK_STATE_KEY = "TRACK_ASK";
+export const APPLY_CHOOSE_STATE_KEY = "APPLY_CHOOSE";
+export const APPLY_HANDOFF_STATE_KEY = "APPLY_HANDOFF";
+export const DOWNLOAD_STATE_KEY = "DOWNLOAD";
+export const AI_CHAT_STATE_KEY = "AI_CHAT";
 export const BACK_TO_MENU_ID = "back_to_menu";
 // Same id as MAIN_MENU's "Track Status" row — reused as a button on the
 // submission-confirmation message too, and handled globally (see engine.ts)
@@ -122,8 +126,8 @@ function statusText(
     : label;
 }
 
-/** Every state other than WELCOME/OPTED_OUT ends its menu with this — one button, routed by the engine's global back-to-menu rule. */
-function backToMenuButton(ctx: FlowContext) {
+/** Every state other than WELCOME/OPTED_OUT ends its menu with this — one button, routed by the engine's global back-to-menu rule. Exported for flow/aiChat.ts, which appends the same escape hatch to every AI turn (see the contract's "guarantee the escape hatch ourselves" recommendation). */
+export function backToMenuButton(ctx: FlowContext) {
   return {
     kind: "sendReplyButtons" as const,
     body: ctx.t("back_to_menu"),
@@ -191,6 +195,7 @@ export const flowStates: Record<string, FlowState> = {
               { id: TRACK_STATUS_ID, title: ctx.t("menu_track") },
               { id: "menu_download", title: ctx.t("menu_download") },
               { id: "menu_help", title: ctx.t("menu_help") },
+              { id: "menu_chat", title: ctx.t("menu_chat") },
               {
                 id: "menu_change_language",
                 title: ctx.t("menu_change_language"),
@@ -203,16 +208,18 @@ export const flowStates: Record<string, FlowState> = {
     handleInput: (ctx) => {
       switch (ctx.message.replyId) {
         case "menu_apply":
-          return "APPLY_CHOOSE";
+          return APPLY_CHOOSE_STATE_KEY;
         // "menu_track" is handled globally now (engine.ts) so the same
         // button works from the submission-confirmation message too,
         // regardless of the session's current state.
         case "menu_download":
-          return "DOWNLOAD";
+          return DOWNLOAD_STATE_KEY;
         case "menu_help":
           return "HELP";
         case "menu_change_language":
           return LANGUAGE_STATE_KEY;
+        case "menu_chat":
+          return AI_CHAT_STATE_KEY;
         default:
           return null;
       }
@@ -289,6 +296,31 @@ export const flowStates: Record<string, FlowState> = {
         },
         backToMenuButton(ctx),
       ];
+    },
+    handleInput: () => null,
+  },
+
+  // "Chat with us" — hands the conversation to the external AI service (see
+  // ai-handoff-contract.html and flow/aiChat.ts). Every message while in
+  // this state is intercepted by the engine BEFORE reaching handleInput
+  // below (see engine.ts's AI_CHAT branch) — handleInput here only exists
+  // to satisfy the FlowState contract and is never actually called.
+  AI_CHAT: {
+    key: AI_CHAT_STATE_KEY,
+    onEnter: (ctx) => {
+      // Re-entering the SAME AI_CHAT session (control.action: "continue")
+      // re-runs onEnter every turn just like any other state — this check
+      // is what keeps the automated-assistant disclosure to a one-time
+      // greeting instead of repeating on every reply (see the contract's
+      // "disclose it's automated" compliance rule: "not on every turn,
+      // just the entry point").
+      if (ctx.session.currentStateKey === AI_CHAT_STATE_KEY) return [];
+      // Fresh entry: mint a new conversationId — the contract mints one
+      // "each time a user re-enters Chat with us", never reused across
+      // sessions — and reset the turn counter that flow/aiChat.ts increments.
+      ctx.session.data.aiConversationId = `conv_${randomUUID()}`;
+      ctx.session.data.aiTurnNumber = 0;
+      return [{ kind: "sendText", text: ctx.t("ai_chat_intro") }];
     },
     handleInput: () => null,
   },

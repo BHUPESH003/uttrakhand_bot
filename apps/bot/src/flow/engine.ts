@@ -15,61 +15,26 @@ import { config } from "../config";
 import { whatsAppClient, type WhatsAppClient } from "../whatsapp/client";
 import type { IncomingMessage } from "../whatsapp/types";
 import { sessionStore, type Session } from "../session/store";
+import { executeAction } from "./actions";
 import {
   flowStates,
   ENTRY_STATE_KEY,
   LANGUAGE_STATE_KEY,
   MAIN_MENU_STATE_KEY,
   TRACK_ASK_STATE_KEY,
+  AI_CHAT_STATE_KEY,
   BACK_TO_MENU_ID,
   TRACK_STATUS_ID,
   handleEntry,
   matchGlobalTextCommand,
 } from "./definition";
+import { handleAiChatTurn } from "./aiChat";
 import { resolveCopy, type CopyKey, type Lang } from "./copy";
-import type { FlowContext, OutgoingAction } from "./types";
+import type { FlowContext } from "./types";
 
 function makeT(session: Session) {
   return (key: CopyKey, vars?: Record<string, string>) =>
     resolveCopy(session.data.lang as Lang | undefined, key, vars);
-}
-
-async function executeAction(
-  client: WhatsAppClient,
-  to: string,
-  action: OutgoingAction,
-): Promise<void> {
-  switch (action.kind) {
-    case "sendText":
-      await client.sendText(to, action.text);
-      break;
-    case "sendImage":
-      await client.sendImage(to, action.imageUrl, action.caption);
-      break;
-    case "sendDocument":
-      await client.sendDocument(to, action.documentUrl, action.filename, action.caption);
-      break;
-    case "sendReplyButtons":
-      await client.sendReplyButtons(to, action.body, action.buttons);
-      break;
-    case "sendList":
-      await client.sendList(to, action.body, action.buttonText, action.sections);
-      break;
-    case "sendCtaUrl":
-      await client.sendCtaUrl(to, action.body, action.buttonText, action.url, action.headerText);
-      break;
-  }
-
-  // Audit trail, mirroring the reference bot's MessageHistory /
-  // MetaAuditDetail tables. Logged only after a successful send — if the
-  // client call above threw, there's nothing to record as sent.
-  await logMessage({
-    mobileNumber: to,
-    direction: "OUTGOING",
-    type: action.kind,
-    status: "sent",
-    payload: action,
-  });
 }
 
 /** Runs onEnter for `stateKey` and updates session.currentStateKey to match. */
@@ -163,6 +128,12 @@ export async function handleIncomingMessage(
     nextKey = ENTRY_STATE_KEY;
   } else if (globalCommand === "CHANGE_LANGUAGE" && hasOnboarded) {
     nextKey = LANGUAGE_STATE_KEY;
+  } else if (session.currentStateKey === AI_CHAT_STATE_KEY) {
+    // AI_CHAT bypasses the normal onEnter/handleInput dance: rendering its
+    // reply means sending whatever the AI service just returned, not a
+    // fixed state shape — see flow/aiChat.ts for why this needs its own
+    // module instead of living as data in flow/definition.ts.
+    nextKey = await handleAiChatTurn(client, session, message);
   } else {
     const currentState = flowStates[session.currentStateKey] ?? flowStates[ENTRY_STATE_KEY]!;
     nextKey = await currentState.handleInput({ session, message, t: makeT(session) });

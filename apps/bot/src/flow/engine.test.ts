@@ -32,6 +32,8 @@ process.env.BANNER_IMAGE_URL ??= "https://example.com/banner.png";
 process.env.DATABASE_URL ??=
   "postgresql://uttarakhand_bot:uttarakhand_bot@localhost:5432/uttarakhand_bot?schema=public";
 process.env.INTERNAL_API_SECRET ??= "test-internal-secret";
+process.env.AI_SERVICE_URL ??= "https://example.com/ai";
+process.env.AI_SERVICE_TOKEN ??= "test-ai-token";
 
 // The raw Graph API request body a send* method posts — untyped here
 // (matching WhatsAppClient.post's own `unknown`), read through the small
@@ -108,6 +110,7 @@ async function main() {
     "menu_track",
     "menu_download",
     "menu_help",
+    "menu_chat",
     "menu_change_language",
   ]);
 
@@ -273,6 +276,89 @@ async function main() {
   assert.equal(client.calls[client.calls.length - 2]!.type, "document");
   assert.equal(client.calls[client.calls.length - 2]!.document.link, "https://example.com/certs/test.pdf");
   assert.equal(last().interactive.type, "button");
+
+  // 17. "Chat with us" hands the conversation to the external AI service
+  // (ai-handoff-contract.html). First entry shows the one-time
+  // automated-assistant disclosure.
+  await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
+  await handleIncomingMessage(replyMsg(user, "menu_chat"), client);
+  assert.equal(last().type, "text");
+  assert.match(textOf(last()), /automated assistant/);
+
+  // converseWithAi calls the global fetch directly — there's no protected
+  // seam like WhatsAppClient's `post` to override here, so stub fetch
+  // itself for the AI-turn scenarios below.
+  const originalFetch = globalThis.fetch;
+  let capturedRequest: any;
+  globalThis.fetch = (async (_url: string, init: any) => {
+    capturedRequest = JSON.parse(init.body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        contractVersion: "1.0",
+        requestId: capturedRequest.requestId,
+        conversationId: capturedRequest.conversationId,
+        messages: [
+          { type: "text", text: "Here is how to apply." },
+          {
+            type: "buttons",
+            body: "Anything else?",
+            buttons: [{ id: "sys:apply", title: "Apply now" }],
+          },
+        ],
+        control: { action: "continue", reason: null },
+        meta: { intent: "faq_how_to_apply", confidence: 0.9 },
+      }),
+    };
+  }) as typeof fetch;
+
+  await handleIncomingMessage(
+    textMsg(user, "How do I apply for a domicile certificate?"),
+    client,
+  );
+  assert.equal(capturedRequest.context.entryPoint, "menu_chat_with_us");
+  assert.equal(capturedRequest.message.text, "How do I apply for a domicile certificate?");
+  assert.equal(client.calls[client.calls.length - 2]!.type, "text");
+  assert.match(textOf(client.calls[client.calls.length - 2]!), /how to apply/);
+  assert.equal(last().interactive.type, "button");
+  // The AI's own button plus our guaranteed escape hatch, merged into the same block.
+  assert.deepEqual(buttonIds(last()), ["sys:apply", "back_to_menu"]);
+
+  // 18. A reserved sys:* id is intercepted, never forwarded to the AI, and
+  // routes straight into the matching deterministic menu.
+  await handleIncomingMessage(replyMsg(user, "sys:apply"), client);
+  assert.equal(last().interactive.type, "button");
+  assert.deepEqual(buttonIds(last()), ["service_birth", "service_death", "service_domicile"]);
+
+  // 19. An apply-intent shortcut (the AI already knows the certificate
+  // type) skips the picker entirely and mints a real application-form
+  // link — this is the fix for "AI gives steps, we also return the apply
+  // form URL" instead of forcing a redundant re-selection.
+  await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
+  await handleIncomingMessage(replyMsg(user, "menu_chat"), client);
+  await handleIncomingMessage(textMsg(user, "How do I apply for a domicile certificate?"), client);
+  await handleIncomingMessage(replyMsg(user, "sys:apply_domicile"), client);
+  const domicileCtaCall = client.calls[client.calls.length - 2]!;
+  assert.equal(domicileCtaCall.interactive.type, "cta_url");
+  assert.match(ctaUrlOf(domicileCtaCall), /service=domicile/);
+  assert.equal(last().interactive.type, "button");
+  assert.deepEqual(buttonIds(last()), ["back_to_menu"]);
+
+  // 20. AI service failures fall back gracefully — never a raw error — and
+  // hand back to the main menu.
+  await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
+  await handleIncomingMessage(replyMsg(user, "menu_chat"), client);
+  globalThis.fetch = (async () => {
+    throw new Error("network down");
+  }) as typeof fetch;
+  await handleIncomingMessage(textMsg(user, "are you there?"), client);
+  const fallbackCall = client.calls[client.calls.length - 2]!;
+  assert.equal(fallbackCall.interactive.type, "button");
+  assert.match(fallbackCall.interactive.body.text, /trouble responding/);
+  assert.equal(last().interactive.type, "list"); // handed back to MAIN_MENU
+
+  globalThis.fetch = originalFetch;
 
   await prisma.$disconnect();
   console.log(`ok — ${client.calls.length} messages sent across the full flow`);

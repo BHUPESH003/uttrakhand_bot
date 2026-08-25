@@ -1,0 +1,972 @@
+<title>e-Seva AI Handoff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --bg: #f4f5fa;
+    --surface: #ffffff;
+    --surface-2: #eef0f7;
+    --ink: #141b30;
+    --muted: #5b6478;
+    --faint: #8a91a6;
+    --line: #dde1ec;
+    --line-strong: #c7ccdc;
+
+    --navy-900: #0f1830;
+    --navy-700: #1c3157;
+    --navy-500: #2f4f7c;
+    --navy-100: #d3dbe8;
+    --navy-50: #eef1f6;
+
+    --green-700: #124f26;
+    --green-600: #186530;
+    --green-500: #1f7a3d;
+    --green-100: #c9e8d3;
+    --green-50: #eaf6ee;
+
+    --warn-ink: #7a4b06;
+    --warn-bg: #fdf1dc;
+    --warn-line: #f0d6a3;
+
+    --danger-ink: #8c2318;
+    --danger-bg: #fbe9e7;
+    --danger-line: #f0bcb4;
+
+    --code-bg: #f3f4fa;
+    --code-ink: #1c2740;
+    --code-line: #dfe3ef;
+
+    --shadow: 0 1px 2px rgba(20, 27, 48, 0.04), 0 8px 24px rgba(20, 27, 48, 0.05);
+    --radius: 10px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c1120;
+      --surface: #121829;
+      --surface-2: #171f34;
+      --ink: #eef1f8;
+      --muted: #9aa2ba;
+      --faint: #6d7590;
+      --line: #262f47;
+      --line-strong: #333d5a;
+
+      --navy-900: #0b1122;
+      --navy-700: #cbd7ee;
+      --navy-500: #8fa8d1;
+      --navy-100: #26365a;
+      --navy-50: #182238;
+
+      --green-700: #bfe8cd;
+      --green-600: #7bd39b;
+      --green-500: #4fc27c;
+      --green-100: #1c3a29;
+      --green-50: #142a1e;
+
+      --warn-ink: #f5d38f;
+      --warn-bg: #2c2110;
+      --warn-line: #5a4520;
+
+      --danger-ink: #f3a89e;
+      --danger-bg: #2c1613;
+      --danger-line: #5a2a24;
+
+      --code-bg: #0f1526;
+      --code-ink: #dbe1f2;
+      --code-line: #263151;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0c1120;
+    --surface: #121829;
+    --surface-2: #171f34;
+    --ink: #eef1f8;
+    --muted: #9aa2ba;
+    --faint: #6d7590;
+    --line: #262f47;
+    --line-strong: #333d5a;
+
+    --navy-900: #0b1122;
+    --navy-700: #cbd7ee;
+    --navy-500: #8fa8d1;
+    --navy-100: #26365a;
+    --navy-50: #182238;
+
+    --green-700: #bfe8cd;
+    --green-600: #7bd39b;
+    --green-500: #4fc27c;
+    --green-100: #1c3a29;
+    --green-50: #142a1e;
+
+    --warn-ink: #f5d38f;
+    --warn-bg: #2c2110;
+    --warn-line: #5a4520;
+
+    --danger-ink: #f3a89e;
+    --danger-bg: #2c1613;
+    --danger-line: #5a2a24;
+
+    --code-bg: #0f1526;
+    --code-ink: #dbe1f2;
+    --code-line: #263151;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .devanagari { font-family: "Noto Sans Devanagari", "IBM Plex Sans", sans-serif; }
+
+  a { color: var(--green-600); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--green-500);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3, h4 { text-wrap: balance; font-family: "IBM Plex Sans", sans-serif; color: var(--ink); }
+
+  code, pre, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  .doc {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 48px;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 24px 96px;
+  }
+
+  @media (max-width: 900px) {
+    .doc { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- sidebar ---------- */
+  .toc-wrap { position: relative; }
+  .toc {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .toc { position: static; }
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .brand .mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--green-600);
+  }
+  .brand .mark::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--green-500);
+    transform: rotate(45deg);
+    flex: none;
+  }
+  .brand h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.25;
+  }
+  .brand p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .status-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .status-card .row { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); }
+  .status-card .row b { color: var(--ink); font-weight: 600; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    border: 1px solid var(--warn-line);
+  }
+  .pill::before { content: "●"; font-size: 8px; }
+
+  nav.sections { display: flex; flex-direction: column; gap: 2px; }
+  nav.sections a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13.5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-left: 2px solid transparent;
+  }
+  nav.sections a:hover { color: var(--ink); background: var(--surface-2); }
+  nav.sections .grp {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 0 10px;
+  }
+
+  /* ---------- content ---------- */
+  main { min-width: 0; }
+
+  .lede {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 62ch;
+    margin: 6px 0 0;
+  }
+
+  section { padding-top: 56px; scroll-margin-top: 24px; }
+  section:first-of-type { padding-top: 0; }
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--green-600);
+    margin: 0 0 8px;
+  }
+  h2 { font-size: 26px; margin: 0 0 6px; }
+  h2 + .sec-sub { color: var(--muted); margin: 0 0 24px; max-width: 68ch; }
+  h3 { font-size: 18px; margin: 28px 0 10px; }
+  h4 { font-size: 14.5px; margin: 20px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  p { max-width: 72ch; }
+  ul, ol { max-width: 70ch; padding-left: 1.3em; }
+  li + li { margin-top: 6px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  /* architecture diagram */
+  .arch {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 20px 0 8px;
+    overflow-x: auto;
+  }
+  .arch-node {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    min-width: 168px;
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .arch-node .label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+  .arch-node .name { font-size: 15px; font-weight: 600; }
+  .arch-node .sub { font-size: 12.5px; color: var(--muted); }
+  .arch-node.accent { border-color: var(--green-500); background: var(--green-50); }
+  .arch-node.accent .name { color: var(--green-700); }
+  .arch-arrow {
+    flex: 0 0 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--faint);
+    font-size: 13px;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .arch-arrow span { white-space: nowrap; font-size: 10.5px; }
+  .arch-arrow svg { width: 40px; height: 14px; }
+
+  /* lifecycle steps */
+  .steps { display: flex; flex-direction: column; margin: 20px 0; }
+  .step { display: grid; grid-template-columns: 32px 1fr; gap: 16px; padding-bottom: 22px; position: relative; }
+  .step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 30px;
+    bottom: -4px;
+    width: 1px;
+    background: var(--line-strong);
+  }
+  .step .num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--navy-50);
+    color: var(--navy-700);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+    font-family: "IBM Plex Mono", monospace;
+    z-index: 1;
+  }
+  .step .txt b { display: block; margin-bottom: 2px; }
+  .step .txt p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  /* code blocks */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--code-line);
+    border-radius: var(--radius);
+    margin: 14px 0 22px;
+    overflow: hidden;
+  }
+  .code-block .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--code-line);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .code-block .bar .tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    color: var(--code-ink);
+  }
+  .method {
+    display: inline-flex;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    background: var(--green-100);
+    color: var(--green-700);
+    margin-right: 8px;
+  }
+  .code-block pre {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--code-ink);
+  }
+  .code-block code { font-size: inherit; }
+
+  .tok-key { color: var(--navy-500); }
+  .tok-str { color: var(--green-600); }
+  .tok-num { color: #a2673f; }
+  .tok-bool { color: #8451c9; }
+  .tok-com { color: var(--faint); font-style: italic; }
+
+  /* tables */
+  .table-wrap { overflow-x: auto; margin: 14px 0 24px; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 560px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th {
+    background: var(--surface-2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td .fname, th .fname { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink); }
+  td.num { font-variant-numeric: tabular-nums; }
+  .req { color: var(--danger-ink); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .opt { color: var(--faint); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+
+  /* callouts */
+  .callout {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    margin: 16px 0 24px;
+    max-width: 76ch;
+    font-size: 14.5px;
+  }
+  .callout .icon { flex: none; font-size: 16px; line-height: 1.5; }
+  .callout.warn { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
+  .callout.danger { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger-ink); }
+  .callout.info { background: var(--navy-50); border-color: var(--navy-100); color: var(--ink); }
+  .callout p { margin: 0; max-width: none; }
+  .callout p + p { margin-top: 6px; }
+
+  /* id chips (reserved control ids) */
+  .chip { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; background: var(--navy-50); color: var(--navy-700); padding: 2px 7px; border-radius: 6px; border: 1px solid var(--navy-100); white-space: nowrap; }
+
+  /* message-kind cards for response contract */
+  .kind-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .kind-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: var(--surface);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .kind-card .k { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--green-600); font-weight: 600; }
+  .kind-card .d { font-size: 13px; color: var(--muted); }
+  .kind-card .lim { font-size: 11.5px; color: var(--faint); border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 2px; }
+
+  /* wa message mock */
+  .wa-mock {
+    background: #0b1512;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
+    background-size: 14px 14px;
+    border-radius: var(--radius);
+    padding: 18px;
+    margin: 16px 0 24px;
+    max-width: 360px;
+  }
+  .wa-bubble {
+    background: #1f2c26;
+    color: #eaf3ee;
+    padding: 9px 12px;
+    border-radius: 8px 8px 8px 2px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    max-width: 92%;
+  }
+  .wa-bubble b { color: #fff; }
+  .wa-buttons { display: flex; flex-direction: column; gap: 1px; background: #16211c; border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+  .wa-buttons button {
+    all: unset;
+    background: #1f2c26;
+    color: #7bd39b;
+    text-align: center;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: default;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+  .good, .bad { border-radius: var(--radius); padding: 14px 16px; border: 1px solid var(--line); }
+  .good { background: var(--green-50); border-color: var(--green-100); }
+  .bad { background: var(--danger-bg); border-color: var(--danger-line); }
+  .good .tag, .bad .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .good .tag { color: var(--green-700); }
+  .bad .tag { color: var(--danger-ink); }
+  .good pre, .bad pre { white-space: pre-wrap; font-size: 13px; margin: 8px 0 0; font-family: "IBM Plex Mono", monospace; line-height: 1.6; }
+
+  .checklist { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; max-width: 70ch; }
+  .checklist li { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; }
+  .checklist li::before { content: "?"; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--navy-100); color: var(--navy-700); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; font-family: "IBM Plex Mono", monospace; }
+
+  .decided { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; max-width: 70ch; }
+  .decided li { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; }
+  .decided li::before { content: "✓"; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--green-100); color: var(--green-700); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; font-family: "IBM Plex Mono", monospace; }
+
+  hr.div { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+
+  footer.doc-foot { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12.5px; }
+</style>
+
+<div class="doc">
+  <div class="toc-wrap">
+    <div class="toc">
+      <div class="brand">
+        <span class="mark">Uttarakhand e-Seva</span>
+        <h1>AI Handoff — API Contract</h1>
+        <p>Bot ↔ AI service integration spec, v1.0-draft</p>
+      </div>
+
+      <div class="status-card">
+        <span class="pill">Draft — codebase on hold</span>
+        <div class="row"><span>Owner</span><b>Bot engineering</b></div>
+        <div class="row"><span>For</span><b>AI team review</b></div>
+        <div class="row"><span>Trigger</span><b>"Chat with us" tap</b></div>
+      </div>
+
+      <nav class="sections">
+        <a href="#overview">Overview &amp; trigger</a>
+        <a href="#lifecycle">Conversation lifecycle</a>
+        <div class="grp">Contract</div>
+        <a href="#request">Request — Bot → AI</a>
+        <a href="#response">Response — AI → Bot</a>
+        <a href="#control-ids">Reserved control IDs</a>
+        <a href="#reliability">Auth, timeouts &amp; errors</a>
+        <div class="grp">Guardrails</div>
+        <a href="#compliance">Meta / WhatsApp rules</a>
+        <a href="#formatting">Answer formatting</a>
+        <div class="grp">Beyond the contract</div>
+        <a href="#ux">UX recommendations</a>
+        <a href="#open-questions">Decided &amp; still open</a>
+      </nav>
+    </div>
+  </div>
+
+  <main>
+
+    <section id="overview">
+      <p class="eyebrow">Overview</p>
+      <h2>One escape hatch into a real conversation</h2>
+      <p class="lede">Today's bot is a fixed menu tree. We're adding one new row — <b>Chat with us</b> — that hands the conversation to an external AI service for free-form Q&amp;A, and hands it back the moment the AI (or the user) is done. The bot never runs any AI itself: it's a thin, deterministic relay that renders whatever the AI service tells it to send, using message types WhatsApp already supports.</p>
+
+      <div class="callout info">
+        <span class="icon">i</span>
+        <div>
+          <p><b>Scope of this document:</b> the HTTP contract between our bot and your API, the WhatsApp/Meta rules that contract has to respect, and UX suggestions. No bot code changes yet — this is what we're aligning on before anything gets built.</p>
+        </div>
+      </div>
+
+      <h3>Where it sits</h3>
+      <div class="arch">
+        <div class="arch-node">
+          <span class="label">Channel</span>
+          <span class="name">WhatsApp user</span>
+          <span class="sub">Taps "Chat with us" in the main menu</span>
+        </div>
+        <div class="arch-arrow"><svg viewBox="0 0 40 14"><line x1="0" y1="7" x2="34" y2="7" stroke="currentColor" stroke-width="1.5"/><path d="M28 2 L36 7 L28 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <div class="arch-node accent">
+          <span class="label">This repo</span>
+          <span class="name">Bot · Flow engine</span>
+          <span class="sub">Fastify webhook, AI_CHAT state, WhatsApp client</span>
+        </div>
+        <div class="arch-arrow">
+          <svg viewBox="0 0 40 14"><line x1="0" y1="7" x2="34" y2="7" stroke="currentColor" stroke-width="1.5"/><path d="M28 2 L36 7 L28 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>request</span>
+        </div>
+        <div class="arch-node">
+          <span class="label">Your service</span>
+          <span class="name">AI API</span>
+          <span class="sub">Owns the model, memory &amp; intent logic</span>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-top:-6px;">The AI service never talks to Meta directly — every reply is rendered by our existing WhatsApp client, which already enforces Meta's formatting limits.</p>
+    </section>
+
+    <section id="lifecycle">
+      <p class="eyebrow">Flow</p>
+      <h2>Conversation lifecycle</h2>
+      <p class="sec-sub">What happens between the tap and the hand-back — this is the loop the contract below has to support on every turn.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <div class="txt"><b>User taps "Chat with us"</b><p>A new row on the main menu, alongside Apply / Track / Download / Help. The bot mints a <span class="chip">conversationId</span> and enters a new <span class="chip">AI_CHAT</span> flow state.</p></div>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <div class="txt"><b>Every message routes to your API</b><p>While in <span class="chip">AI_CHAT</span>, each inbound text, button tap, or list tap becomes one <a href="#request">Request</a> — except our existing global commands ("hi" to restart, "language" to switch), which still short-circuit the AI, same as they do today for the rest of the bot.</p></div>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <div class="txt"><b>Bot renders the response</b><p>The <a href="#response">Response</a>'s <code>messages[]</code> get sent in order using our existing WhatsApp client (text, buttons, list, cta_url, image, or document) — no new message-sending code required on our side.</p></div>
+        </div>
+        <div class="step">
+          <div class="num">4</div>
+          <div class="txt"><b>Loop, or hand back</b><p><code>control.action</code> decides what happens next: stay in the AI flow, jump to a specific deterministic menu, or close out back to the main menu. See <a href="#control-ids">reserved control IDs</a>.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <section id="request">
+      <p class="eyebrow">Contract · 1 of 2</p>
+      <h2>Request — Bot → AI</h2>
+      <p class="sec-sub">One call per user turn. Stateless on our side by design — we do not send conversation history in this request. Your service owns multi-turn memory, keyed by <code>conversationId</code>, for the life of the AI_CHAT session.</p>
+
+      <div class="code-block">
+        <div class="bar"><span class="tag"><span class="method">POST</span>{AI_SERVICE_URL}/v1/converse</span><span>contractVersion 1.0</span></div>
+        <pre><code>{
+  <span class="tok-key">"contractVersion"</span>: <span class="tok-str">"1.0"</span>,
+  <span class="tok-key">"requestId"</span>: <span class="tok-str">"b3f1e6d2-9c31-4e2a-8a3f-11f2c9a7d004"</span>,
+  <span class="tok-key">"conversationId"</span>: <span class="tok-str">"conv_8f2c1a90"</span>,
+  <span class="tok-key">"channel"</span>: <span class="tok-str">"whatsapp"</span>,
+  <span class="tok-key">"timestamp"</span>: <span class="tok-str">"2026-08-25T10:15:32.000Z"</span>,
+  <span class="tok-key">"user"</span>: {
+    <span class="tok-key">"waId"</span>: <span class="tok-str">"919812345678"</span>,
+    <span class="tok-key">"profileName"</span>: <span class="tok-str">"Vikas Kumar"</span>,
+    <span class="tok-key">"language"</span>: <span class="tok-str">"hi"</span>
+  },
+  <span class="tok-key">"whatsapp"</span>: {
+    <span class="tok-key">"phoneNumberId"</span>: <span class="tok-str">"102938475601"</span>,
+    <span class="tok-key">"incomingMessageId"</span>: <span class="tok-str">"wamid.HBgLOTE5ODEyMzQ1Njc4FQ"</span>,
+    <span class="tok-key">"withinSessionWindow"</span>: <span class="tok-bool">true</span>,
+    <span class="tok-key">"windowExpiresAt"</span>: <span class="tok-str">"2026-08-26T09:40:12.000Z"</span>
+  },
+  <span class="tok-key">"message"</span>: {
+    <span class="tok-key">"type"</span>: <span class="tok-str">"text"</span>,
+    <span class="tok-key">"text"</span>: <span class="tok-str">"How do I apply for a domicile certificate?"</span>,
+    <span class="tok-key">"replyId"</span>: <span class="tok-bool">null</span>,
+    <span class="tok-key">"replyTitle"</span>: <span class="tok-bool">null</span>
+  },
+  <span class="tok-key">"context"</span>: {
+    <span class="tok-key">"entryPoint"</span>: <span class="tok-str">"menu_chat_with_us"</span>,
+    <span class="tok-key">"turnNumber"</span>: <span class="tok-num">1</span>,
+    <span class="tok-key">"applicant"</span>: {
+      <span class="tok-key">"name"</span>: <span class="tok-str">"Vikas Kumar"</span>,
+      <span class="tok-key">"lastService"</span>: <span class="tok-str">"DOMICILE"</span>,
+      <span class="tok-key">"lastApplicationStatus"</span>: <span class="tok-str">"UNDER_REVIEW"</span>
+    }
+  }
+}</code></pre>
+      </div>
+
+      <h4>Field reference</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Field</th><th>Type</th><th></th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><span class="fname">requestId</span></td><td>uuid</td><td class="req">req</td><td>Unique per call. Use it as your idempotency / dedup key — see <a href="#reliability">reliability</a>.</td></tr>
+            <tr><td><span class="fname">conversationId</span></td><td>string</td><td class="req">req</td><td>Stable for the whole AI_CHAT session. New one is minted each time a user re-enters "Chat with us".</td></tr>
+            <tr><td><span class="fname">user.waId</span></td><td>string</td><td class="req">req</td><td>Raw WhatsApp phone number. Treat as PII — see <a href="#compliance">data minimization</a>.</td></tr>
+            <tr><td><span class="fname">user.language</span></td><td><span class="fname">"en" | "hi"</span></td><td class="req">req</td><td>The session's chosen language. Reply in this language only — never mix within one message.</td></tr>
+            <tr><td><span class="fname">whatsapp.withinSessionWindow</span></td><td>boolean</td><td class="req">req</td><td>Meta's 24h free-form window. If <span class="fname">false</span>, we cannot deliver a free-form reply at all — see the compliance section before assuming this is always true.</td></tr>
+            <tr><td><span class="fname">message.type</span></td><td><span class="fname">text | button_reply | list_reply</span></td><td class="req">req</td><td>Mirrors the three inbound shapes our WhatsApp client already parses.</td></tr>
+            <tr><td><span class="fname">message.replyId</span></td><td>string</td><td class="opt">opt</td><td>Set when <span class="fname">type</span> is a reply — either one of your own custom button/row IDs, or a request you'll never actually see (reserved <span class="fname">sys:*</span> IDs are handled by us, not forwarded — see <a href="#control-ids">control IDs</a>).</td></tr>
+            <tr><td><span class="fname">context.turnNumber</span></td><td>integer</td><td class="opt">opt</td><td>1 on entry, incrementing per exchange. Useful for "first message" framing (e.g. a greeting) vs. mid-conversation.</td></tr>
+            <tr><td><span class="fname">context.applicant</span></td><td>object</td><td class="opt">opt</td><td>Deliberately thin. <b>Never</b> includes Aadhaar numbers, addresses, or other sensitive form fields — just enough to answer "what's the status of my application".</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="response">
+      <p class="eyebrow">Contract · 2 of 2</p>
+      <h2>Response — AI → Bot</h2>
+      <p class="sec-sub">This is the modular part: <code>messages</code> is an ordered array of typed blocks, so one turn can be a plain answer, or an answer <i>plus</i> a menu of next steps — your call, per turn.</p>
+
+      <div class="code-block">
+        <div class="bar"><span class="tag">200 OK</span><span>same requestId + conversationId echoed back</span></div>
+        <pre><code>{
+  <span class="tok-key">"contractVersion"</span>: <span class="tok-str">"1.0"</span>,
+  <span class="tok-key">"requestId"</span>: <span class="tok-str">"b3f1e6d2-9c31-4e2a-8a3f-11f2c9a7d004"</span>,
+  <span class="tok-key">"conversationId"</span>: <span class="tok-str">"conv_8f2c1a90"</span>,
+  <span class="tok-key">"messages"</span>: [
+    {
+      <span class="tok-key">"type"</span>: <span class="tok-str">"text"</span>,
+      <span class="tok-key">"text"</span>: <span class="tok-str">"*डोमिसाइल प्रमाणपत्र — आवेदन कैसे करें*\n\n1. मुख्य मेनू में *Apply for Certificate* दबाएं\n2. *Domicile Certificate* चुनें\n3. भेजा गया फॉर्म भरें — नाम, पता, तहसील और पहचान/निवास प्रमाण\n4. आपको यहीं एक संदर्भ नंबर मिलेगा"</span>
+    },
+    {
+      <span class="tok-key">"type"</span>: <span class="tok-str">"buttons"</span>,
+      <span class="tok-key">"body"</span>: <span class="tok-str">"क्या मैं आपके लिए फॉर्म शुरू कर दूं?"</span>,
+      <span class="tok-key">"buttons"</span>: [
+        { <span class="tok-key">"id"</span>: <span class="tok-str">"sys:apply"</span>, <span class="tok-key">"title"</span>: <span class="tok-str">"Apply now"</span> },
+        { <span class="tok-key">"id"</span>: <span class="tok-str">"sys:main_menu"</span>, <span class="tok-key">"title"</span>: <span class="tok-str">"Main menu"</span> }
+      ]
+    }
+  ],
+  <span class="tok-key">"control"</span>: { <span class="tok-key">"action"</span>: <span class="tok-str">"continue"</span>, <span class="tok-key">"reason"</span>: <span class="tok-bool">null</span> },
+  <span class="tok-key">"meta"</span>: { <span class="tok-key">"intent"</span>: <span class="tok-str">"faq_how_to_apply_domicile"</span>, <span class="tok-key">"confidence"</span>: <span class="tok-num">0.94</span> }
+}</code></pre>
+      </div>
+
+      <p style="font-size:13px;color:var(--muted);">Rendered, that pair of blocks looks like this on the user's phone:</p>
+      <div class="wa-mock">
+        <div class="wa-bubble"><b>डोमिसाइल प्रमाणपत्र — आवेदन कैसे करें</b><br>1. मुख्य मेनू में Apply for Certificate दबाएं<br>2. Domicile Certificate चुनें<br>3. भेजा गया फॉर्म भरें<br>4. आपको यहीं एक संदर्भ नंबर मिलेगा</div>
+        <div class="wa-bubble">क्या मैं आपके लिए फॉर्म शुरू कर दूं?</div>
+        <div class="wa-buttons">
+          <button>Apply now</button>
+          <button>Main menu</button>
+        </div>
+      </div>
+
+      <h3>Message block kinds</h3>
+      <p>Every kind maps 1:1 to a method our WhatsApp client already exposes — nothing new to build for sending, only for routing.</p>
+      <div class="kind-grid">
+        <div class="kind-card"><span class="k">text</span><span class="d">Plain message body. Supports WhatsApp's markdown subset — see <a href="#formatting">formatting</a>.</span><span class="lim">≤ 4096 chars (hard cap)</span></div>
+        <div class="kind-card"><span class="k">buttons</span><span class="d">Up to 3 tappable quick replies under a body line.</span><span class="lim">≤ 3 buttons · title ≤ 20 chars</span></div>
+        <div class="kind-card"><span class="k">list</span><span class="d">A scrollable menu behind one button — for more than 3 options.</span><span class="lim">≤ 10 rows total · title ≤ 24 · desc ≤ 72</span></div>
+        <div class="kind-card"><span class="k">cta_url</span><span class="d">One button that opens a link (e.g. deep-linking to a help article).</span><span class="lim">header ≤ 60 chars · button ≤ 20</span></div>
+        <div class="kind-card"><span class="k">image</span><span class="d">Image by URL, optional caption.</span><span class="lim">Meta-hosted or public HTTPS URL</span></div>
+        <div class="kind-card"><span class="k">document</span><span class="d">File by URL (e.g. a help PDF) with a filename.</span><span class="lim">Public HTTPS URL</span></div>
+      </div>
+
+      <div class="callout danger">
+        <span class="icon">!</span>
+        <div><p><b>These limits are enforced server-side by Meta</b> — exceeding any of them fails the <i>entire</i> message (error 131009), not just the offending field. Validate before returning, don't rely on us to catch it.</p></div>
+      </div>
+
+      <h4>Control block</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>action</th><th>Bot behavior</th></tr></thead>
+          <tbody>
+            <tr><td><span class="fname">continue</span></td><td>Stay in AI_CHAT. The user's next message becomes the next Request on this same <span class="fname">conversationId</span>.</td></tr>
+            <tr><td><span class="fname">return_to_menu</span></td><td>Send the messages, then silently drop back to the main menu state — no extra text, no <span class="fname">conversationId</span> reuse.</td></tr>
+            <tr><td><span class="fname">end_session</span></td><td>AI considers the query resolved. Functionally identical to <span class="fname">return_to_menu</span> — separated for your analytics.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <span class="icon">i</span>
+        <div><p><b>Not in this demo:</b> an <span class="fname">escalate_to_human</span> action / human-in-the-loop flag. There's no live escalation path in this phase — see <a href="#compliance">compliance</a> for why this is worth revisiting before a production rollout.</p></div>
+      </div>
+
+      <h4>Meta block <span class="opt">optional, for our analytics — not shown to the user</span></h4>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><td><span class="fname">intent</span></td><td>string</td><td>Free-form label. Surfaced on the admin dashboard to spot recurring questions.</td></tr>
+            <tr><td><span class="fname">confidence</span></td><td>0.0 – 1.0</td><td>For our own analytics only in this phase — no bot behavior currently keys off it.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="control-ids">
+      <p class="eyebrow">Modularity</p>
+      <h2>Reserved control IDs</h2>
+      <p class="sec-sub">Any button or list-row <span class="fname">id</span> you return that starts with <span class="chip">sys:</span> is intercepted by the bot itself — it's how the AI hands control back into our deterministic menus without knowing anything about how they're built. Anything else is treated as your own custom ID and simply comes back to you verbatim as the next <span class="fname">message.replyId</span>.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Hands off to</th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip">sys:main_menu</span></td><td>Main menu (same as today's "Back to Main Menu")</td></tr>
+            <tr><td><span class="chip">sys:apply</span></td><td>Certificate-type picker (Birth / Death / Domicile)</td></tr>
+            <tr><td><span class="chip">sys:track</span></td><td>Track-status flow</td></tr>
+            <tr><td><span class="chip">sys:download</span></td><td>Download-certificate flow</td></tr>
+            <tr><td><span class="chip">sys:end_chat</span></td><td>Closes AI_CHAT quietly, back to main menu</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);">Use these instead of trying to re-implement "Apply" or "Track" yourselves — they route into the exact same code path a menu tap would.</p>
+    </section>
+
+    <hr class="div">
+
+    <section id="reliability">
+      <p class="eyebrow">Operational</p>
+      <h2>Auth, timeouts &amp; errors</h2>
+
+      <h3>Auth</h3>
+      <p><span class="fname">Authorization: Bearer &lt;shared-secret&gt;</span> on every request, over HTTPS only. Rotation process/cadence is decided internally on our side, not something we need from your team. Never log the token or the full request body (it carries <span class="fname">waId</span> — PII).</p>
+
+      <h3>Timeout &amp; retries</h3>
+      <ul>
+        <li>Bot waits <b>25 seconds</b> per call (demo-phase value — no p95 latency requirement set yet). No response in time is treated as a failure.</li>
+        <li>Bot does <b>not</b> auto-retry a failed call — the user's next message naturally starts a fresh turn. Make your own processing idempotent per <span class="fname">requestId</span> in case <i>you</i> retry internally.</li>
+        <li>On any failure (timeout, 5xx, malformed body), the bot sends a graceful fallback message plus a <span class="chip">sys:main_menu</span> button — never a raw error to the user.</li>
+      </ul>
+
+      <h3>Error response</h3>
+      <div class="code-block">
+        <div class="bar"><span class="tag">4xx / 5xx</span></div>
+        <pre><code>{
+  <span class="tok-key">"error"</span>: {
+    <span class="tok-key">"code"</span>: <span class="tok-str">"UPSTREAM_TIMEOUT"</span>,
+    <span class="tok-key">"message"</span>: <span class="tok-str">"Model call exceeded 25s budget"</span> <span class="tok-com">// logged only, never shown to the user</span>
+  }
+}</code></pre>
+      </div>
+
+      <h3>Throughput</h3>
+      <p>Meta's per-business messaging tiers cap total messages sent per day/second, shared across <i>every</i> bot-sent message — the fixed menu and the AI flow draw from the same budget. Cap <span class="fname">messages[]</span> at <b>3 blocks per turn</b>: enough for an answer plus a next-step prompt, without flooding a small screen or eating the cap unnecessarily.</p>
+    </section>
+
+    <hr class="div">
+
+    <section id="compliance">
+      <p class="eyebrow">Guardrails</p>
+      <h2>Meta &amp; WhatsApp rules this contract has to respect</h2>
+      <p class="sec-sub">The AI can be asked almost anything, including "why" and "how" questions that push at the edges of what's allowed. These are the rules that actually constrain what a response can look like or when it can be sent.</p>
+
+      <h3>1. The 24-hour session window</h3>
+      <div class="callout danger">
+        <span class="icon">!</span>
+        <div>
+          <p>Business-initiated free-form messages — <b>including every message type in this contract</b> — are only deliverable within 24 hours of the user's last inbound message. Outside that window, only a pre-approved message template can reach them.</p>
+          <p>That's exactly what <span class="fname">whatsapp.withinSessionWindow</span> tells you on every request. If it's <span class="fname">false</span>, whatever you return in <span class="fname">messages[]</span> cannot be delivered — the bot will not attempt it. Don't design a flow that assumes this is always true.</p>
+        </div>
+      </div>
+
+      <h3>2. Hard formatting limits</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Element</th><th>Limit</th></tr></thead>
+          <tbody>
+            <tr><td>Reply buttons per message</td><td class="num">3 max</td></tr>
+            <tr><td>Reply button title</td><td class="num">20 characters</td></tr>
+            <tr><td>List rows, total across all sections</td><td class="num">10 max</td></tr>
+            <tr><td>List row title</td><td class="num">24 characters</td></tr>
+            <tr><td>List row description</td><td class="num">72 characters</td></tr>
+            <tr><td>List button text</td><td class="num">20 characters</td></tr>
+            <tr><td>cta_url header text</td><td class="num">60 characters</td></tr>
+            <tr><td>Text message body</td><td class="num">4096 characters (hard); keep it well under for readability</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>3. Content &amp; conduct</h3>
+      <ul>
+        <li><b>Stay in scope.</b> Responses should stay within this being a government citizen service — no marketing, no third-party promotion, no content outside certificate services.</li>
+        <li><b>Honor opt-outs.</b> A user who has tapped "Opt Out" in the main flow must never be re-engaged by the AI either — the bot enforces this at the routing layer, but it's worth knowing why <span class="fname">AI_CHAT</span> is unreachable for such users.</li>
+        <li><b>Disclose it's automated.</b> Best practice (and good instinct for a government service): the very first message on entering <span class="fname">AI_CHAT</span> should say plainly that this is an automated assistant — not on every turn, just the entry point.</li>
+        <li><b>Content check before sending.</b> We're adding our own content-check layer on the bot side that reviews every AI response before it reaches the user — independent of whatever moderation your service does internally.</li>
+      </ul>
+
+      <div class="callout warn">
+        <span class="icon">⚠</span>
+        <div><p><b>Known gap for this demo:</b> there's no human-escalation path yet — see the <a href="#response">response contract</a>'s note on <span class="fname">control.action</span>. Meta's guidance (and general good practice) expects a way to reach a person; this should be revisited before any production rollout, not left as a permanent gap.</p></div>
+      </div>
+
+      <h3>4. Data minimization</h3>
+      <div class="callout warn">
+        <span class="icon">⚠</span>
+        <div>
+          <p>This bot handles Aadhaar numbers, full addresses, and other sensitive certificate-form data. <b>None of it belongs in this contract.</b> <span class="fname">context.applicant</span> is intentionally limited to name and coarse application status — enough to answer "where's my application", never enough to reconstruct someone's form.</p>
+          <p>As a state government service, this also falls under India's DPDP Act, 2023 obligations — get legal sign-off on what your service retains from <span class="fname">user.waId</span> and <span class="fname">profileName</span>, and for how long, before this goes live.</p>
+        </div>
+      </div>
+
+      <h3>5. Audit trail</h3>
+      <p>Every outbound message the bot sends — menu-driven or AI-driven — is logged today in one audit table keyed by phone number, direction, and payload. AI-flow messages will be logged exactly the same way, so admin retains one unified trail regardless of which layer generated the content.</p>
+    </section>
+
+    <section id="formatting">
+      <p class="eyebrow">Guardrails</p>
+      <h2>Formatting "how / what / why" answers</h2>
+      <p class="sec-sub">WhatsApp text isn't HTML or Markdown — it supports exactly five things. Answers should look like they belong to the same bot as the rest of the menu, not like a different product bolted on.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Syntax</th><th>Renders as</th></tr></thead>
+          <tbody>
+            <tr><td class="fname">*text*</td><td><b>bold</b></td></tr>
+            <tr><td class="fname">_text_</td><td><i>italic</i></td></tr>
+            <tr><td class="fname">~text~</td><td><s>strikethrough</s></td></tr>
+            <tr><td class="fname">```text```</td><td><code>monospace</code></td></tr>
+            <tr><td class="fname">\n</td><td>line break (no native bullet/numbered list, no headers, no tables)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Good vs. not-quite</h3>
+      <div class="two-col">
+        <div class="good">
+          <span class="tag">✓ Do this</span>
+          <pre>*Domicile Certificate — how to apply*
+
+1. Tap *Apply for Certificate*
+2. Choose *Domicile Certificate*
+3. Fill the form we send you
+4. Get your reference number here
+
+Takes 3–5 working days.</pre>
+        </div>
+        <div class="bad">
+          <span class="tag">✕ Not this</span>
+          <pre>## How to Apply for a Domicile Certificate
+
+- Go to the menu
+- Click apply
+- **Fill** the &lt;form&gt;
+
+| Step | Action |
+|------|--------|
+| 1    | Menu   |</pre>
+        </div>
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);">Headers, real bullets, HTML tags, and tables simply won't render — they'll show up as literal characters on the user's screen.</p>
+
+      <ul>
+        <li>Lead with the direct answer in <span class="fname">*bold*</span> — WhatsApp users scan, they don't read top to bottom.</li>
+        <li>Number steps by typing <span class="fname">1. 2. 3.</span> — there's no real list markup, so this is the convention the rest of the bot's copy already uses.</li>
+        <li>One idea per <span class="fname">text</span> block; split a long answer into 2 sequential blocks rather than one wall of text (still within the 3-block-per-turn cap).</li>
+        <li>Match <span class="fname">user.language</span> exactly — never mix English and Hindi in the same message.</li>
+        <li>Close a substantive answer with a <span class="fname">buttons</span> block offering the logical next step, instead of leaving the user to type free text again.</li>
+      </ul>
+    </section>
+
+    <hr class="div">
+
+    <section id="ux">
+      <p class="eyebrow">Beyond the contract</p>
+      <h2>UX recommendations</h2>
+      <p class="sec-sub">Things worth deciding now, most of which we'd bake into the bot side rather than ask the AI to remember every time.</p>
+
+      <h3>Guarantee the escape hatch ourselves</h3>
+      <p>Rather than trusting every AI response to include a way out, the bot will append a <i>Back to Menu</i> button after each AI turn automatically (merged into your own buttons, up to the 3-button cap if you've already used one or two). One less compliance-critical thing for your team to remember on every response.</p>
+
+      <h3>Nudge, don't just expire</h3>
+      <p>If the user goes quiet mid-conversation, one gentle "Still there? Tap Main Menu anytime" after ~10 minutes reads better than the session just silently running out the 24-hour window.</p>
+
+      <h3>Act on low confidence proactively</h3>
+      <p>When <span class="fname">confidence</span> is low, the bot can surface "Did that answer your question? [Yes] [No]" itself, rather than waiting for a frustrated user to ask twice — worth revisiting once a human-escalation path exists to route the "No" to.</p>
+
+      <h3>Show it's "thinking"</h3>
+      <p>The bot already marks incoming messages read immediately; pairing that with WhatsApp's typing indicator while your API call is in flight keeps a 25-second wait from feeling broken.</p>
+
+      <h3>Feed the admin dashboard</h3>
+      <p><span class="fname">intent</span> and <span class="fname">confidence</span> are worth surfacing on a lightweight "AI conversations" view for staff — it's the fastest way to spot a recurring question that should really be a menu option or an FAQ, not an AI call at all.</p>
+
+      <h3>Fail in character</h3>
+      <p>The fallback message on a timeout or error should read like the rest of the bot's own copy — plain, apologetic, and helpful — not like a raw system error message.</p>
+    </section>
+
+    <section id="open-questions">
+      <p class="eyebrow">Before this ships</p>
+      <h2>Decided vs. still open</h2>
+      <p class="sec-sub">Demo scope only — several things that would normally be open questions are already settled for this phase.</p>
+
+      <h4>Decided</h4>
+      <ul class="decided">
+        <li>Conversation memory — your service owns it, keyed by <span class="fname">conversationId</span>. The bot never replays history.</li>
+        <li>Timeout — 25 seconds per call for this phase (no latency SLA needed from you yet).</li>
+        <li>Content moderation — an additional check layer on our side reviews every response before it reaches the user.</li>
+        <li>Human escalation — out of scope for this demo. No <span class="fname">escalate_to_human</span> action, no <span class="chip">sys:human_handoff</span>.</li>
+        <li>Auth &amp; key rotation — decided internally, not something we need from your team.</li>
+      </ul>
+
+      <h4>Still open</h4>
+      <ul class="checklist">
+        <li>What confidence score should we treat as "low confidence" — for our own analytics, and for the "Did that answer your question?" follow-up prompt?</li>
+      </ul>
+    </section>
+
+    <footer class="doc-foot">
+      Uttarakhand e-Seva WhatsApp bot — AI handoff contract, v1.0-draft. No code changes are in flight against this yet; treat every field name here as proposed, not final.
+    </footer>
+  </main>
+</div>
