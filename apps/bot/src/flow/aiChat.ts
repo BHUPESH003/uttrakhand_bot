@@ -264,16 +264,28 @@ export async function handleAiChatTurn(
     blocks = blocks.slice(0, MAX_MESSAGE_BLOCKS);
   }
 
-  try {
-    const actions = withBackToMenu(blocks.map(toOutgoingAction), t);
-    for (const action of actions) {
+  // Unrecognized block types map to undefined (see toOutgoingAction) — drop
+  // those before sending rather than letting them reach executeAction.
+  const actions = withBackToMenu(blocks.map(toOutgoingAction).filter(Boolean), t);
+
+  // Per-block, not one try/catch around the whole batch: a single bad block
+  // (a 404/wrong-content-type audio URL, a title over Meta's limit) used to
+  // take the ENTIRE turn down with it — including blocks that would have
+  // sent fine, like the AI's own follow-up buttons. Now a failed block is
+  // logged and skipped; the rest of the turn still reaches the user.
+  let sentCount = 0;
+  for (const action of actions) {
+    try {
       await executeAction(client, session.userId, action);
+      sentCount++;
+    } catch (err) {
+      console.error(`[ai-chat] failed to send "${action.kind}" block, skipping it`, err);
     }
-  } catch (err) {
-    // A block that violates Meta's hard limits (e.g. a 4th button, a
-    // 21-char title) fails the whole send (error 131009) — same graceful
-    // fallback as an outright AI service failure, never a raw error.
-    console.error("[ai-chat] failed to render AI response", err);
+  }
+
+  if (sentCount === 0) {
+    // Every block failed — the user got nothing this turn. Same graceful
+    // fallback as an outright AI service failure, never silence.
     await sendFallback(client, session.userId, t);
     return MAIN_MENU_STATE_KEY;
   }

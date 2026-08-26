@@ -54,7 +54,7 @@ function ctaUrlOf(call: Call): string {
 }
 
 async function main() {
-  const { WhatsAppClient } = await import("../whatsapp/client.js");
+  const { WhatsAppClient, WhatsAppApiError } = await import("../whatsapp/client.js");
   const { handleIncomingMessage } = await import("./engine.js");
   const { prisma, resolveToken } = await import("db");
 
@@ -65,9 +65,18 @@ async function main() {
     // Graph API endpoints than post()'s /messages, so they need their own
     // seam (see whatsapp/client.ts).
     mediaInfoOverride: { url: string; mimeType: string; fileSizeBytes: number } | null = null;
+    // Simulates Meta rejecting one specific message type (e.g. a bad-
+    // Content-Type audio URL) — consumed after one throw so the rest of a
+    // test's calls succeed normally.
+    failNextPostType: string | null = null;
 
     protected override async post(body: unknown): Promise<unknown> {
-      this.calls.push(body as Call);
+      const call = body as Call;
+      if (this.failNextPostType && call.type === this.failNextPostType) {
+        this.failNextPostType = null;
+        throw new WhatsAppApiError(`simulated Meta rejection of a "${call.type}" message`, 400);
+      }
+      this.calls.push(call);
       return {};
     }
     override async getMediaInfo(mediaId: string) {
@@ -453,7 +462,41 @@ async function main() {
   assert.equal(last().interactive.type, "button");
   assert.deepEqual(buttonIds(last()), ["back_to_menu"]);
 
-  // 23. A voice note over the size cap gets a graceful "too long" fallback
+  // 23. One block failing to send (e.g. Meta rejecting an audio URL served
+  // with the wrong Content-Type — a real bug hit in AI-team testing)
+  // doesn't take the rest of the turn down with it: the text before it and
+  // the buttons after it still reach the user, instead of collapsing to
+  // the generic fallback.
+  globalThis.fetch = (async (_url: string, init: any) => {
+    capturedRequest = JSON.parse(init.body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        contractVersion: "1.1",
+        requestId: capturedRequest.requestId,
+        conversationId: capturedRequest.conversationId,
+        messages: [
+          { type: "text", text: "Here is your answer." },
+          { type: "audio", audioUrl: "https://example.com/tts/broken.ogg" },
+          { type: "buttons", body: "Anything else?", buttons: [{ id: "sys:apply", title: "Apply now" }] },
+        ],
+        control: { action: "continue", reason: null },
+        meta: { intent: "faq_voice", confidence: 0.9 },
+      }),
+    };
+  }) as typeof fetch;
+  client.failNextPostType = "audio";
+  const beforePartialFailure = client.calls.length;
+  await handleIncomingMessage(textMsg(user, "ask something"), client);
+  const sentAfterPartialFailure = client.calls.slice(beforePartialFailure);
+  assert.equal(sentAfterPartialFailure.length, 2); // text + buttons — audio silently skipped
+  assert.equal(sentAfterPartialFailure[0]!.type, "text");
+  assert.match(textOf(sentAfterPartialFailure[0]!), /Here is your answer/);
+  assert.equal(sentAfterPartialFailure[1]!.type, "interactive");
+  assert.deepEqual(buttonIds(sentAfterPartialFailure[1]!), ["sys:apply", "back_to_menu"]);
+
+  // 24. A voice note over the size cap gets a graceful "too long" fallback
   // instead of being forwarded — and stays in AI_CHAT so the user can retry
   // with a shorter note or just type (ai-voice-handoff-contract.html#media-limits).
   client.mediaInfoOverride = {
@@ -472,13 +515,13 @@ async function main() {
   await handleIncomingMessage(textMsg(user, "never mind, typing instead"), client);
   assert.ok(capturedRequest, "expected AI_CHAT to still be active after the too-long fallback");
 
-  // 24. A shared audio file (not an in-app voice note) is rejected with its
+  // 25. A shared audio file (not an in-app voice note) is rejected with its
   // own fallback, also staying in AI_CHAT — this phase only accepts voice
   // notes recorded directly in WhatsApp.
   await handleIncomingMessage(audioMsg(user, { isVoiceNote: false }), client);
   assert.match(last().interactive.body.text, /voice notes recorded here in WhatsApp/);
 
-  // 25. AI service failures fall back gracefully — never a raw error — and
+  // 26. AI service failures fall back gracefully — never a raw error — and
   // hand back to the main menu.
   await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
   await handleIncomingMessage(replyMsg(user, "menu_chat"), client);
