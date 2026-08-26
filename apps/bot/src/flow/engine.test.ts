@@ -56,6 +56,7 @@ function ctaUrlOf(call: Call): string {
 async function main() {
   const { WhatsAppClient, WhatsAppApiError } = await import("../whatsapp/client.js");
   const { handleIncomingMessage } = await import("./engine.js");
+  const { recordStatus } = await import("../whatsapp/deliveryTracker.js");
   const { prisma, resolveToken } = await import("db");
 
   class RecordingClient extends WhatsAppClient {
@@ -77,7 +78,9 @@ async function main() {
         throw new WhatsAppApiError(`simulated Meta rejection of a "${call.type}" message`, 400);
       }
       this.calls.push(call);
-      return {};
+      // Real Graph API responses look like { messages: [{ id: "wamid..." }] }
+      // — sendAudio relies on this to hand a wamid to deliveryTracker.
+      return call.type === "audio" ? { messages: [{ id: "test-audio-wamid" }] } : {};
     }
     override async getMediaInfo(mediaId: string) {
       if (!this.mediaInfoOverride) throw new Error(`no mediaInfoOverride set for ${mediaId}`);
@@ -425,7 +428,12 @@ async function main() {
 
   // 22. A voice note in AI_CHAT is downloaded from Meta and relayed to the
   // AI service as base64 (ai-voice-handoff-contract.html#request); an
-  // `audio` response block renders as a real WhatsApp audio message.
+  // `audio` response block renders as a real WhatsApp audio message. Also
+  // verifies the delivery-status wait (whatsapp/deliveryTracker.ts): the
+  // turn should unblock as soon as Meta's "delivered" callback for the
+  // audio wamid arrives, not sit out the full AUDIO_DELIVERY_TIMEOUT_MS —
+  // replacing a fixed guess-the-gap delay that a live test showed wasn't
+  // reliable (buttons still rendered before the voice note).
   await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
   await handleIncomingMessage(replyMsg(user, "menu_chat"), client);
   client.mediaInfoOverride = {
@@ -449,7 +457,20 @@ async function main() {
     };
   }) as typeof fetch;
 
-  await handleIncomingMessage(audioMsg(user), client);
+  const voiceTurnStarted = Date.now();
+  const voiceTurnPromise = handleIncomingMessage(audioMsg(user), client);
+  // Give the audio POST a beat to actually go out before simulating Meta's
+  // webhook callback — RecordingClient.post() hands sendAudio a fixed
+  // "test-audio-wamid" for every audio send (see its override above).
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  recordStatus("test-audio-wamid", "delivered");
+  await voiceTurnPromise;
+  const voiceTurnMs = Date.now() - voiceTurnStarted;
+  assert.ok(
+    voiceTurnMs < 2000,
+    `expected the "delivered" callback to unblock the turn quickly, took ${voiceTurnMs}ms`,
+  );
+
   assert.equal(capturedRequest.message.type, "audio");
   assert.equal(capturedRequest.message.text, null);
   assert.equal(capturedRequest.message.audio.encoding, "base64");
@@ -510,8 +531,27 @@ async function main() {
   assert.deepEqual(buttonIds(last()), ["back_to_menu"]);
 
   // Still in AI_CHAT afterward: a normal text message keeps going to the AI
-  // service, rather than falling back to MAIN_MENU's unrecognized-input path.
+  // service, rather than falling back to MAIN_MENU's unrecognized-input
+  // path. Swapped to a plain text-only stub (no audio block) — the
+  // previous step's stub is still active otherwise, and its audio block
+  // would now send for real (failNextPostType only fires once) with
+  // nothing to resolve its delivery wait.
   capturedRequest = undefined;
+  globalThis.fetch = (async (_url: string, init: any) => {
+    capturedRequest = JSON.parse(init.body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        contractVersion: "1.1",
+        requestId: capturedRequest.requestId,
+        conversationId: capturedRequest.conversationId,
+        messages: [{ type: "text", text: "Sure, go ahead and type your question." }],
+        control: { action: "continue", reason: null },
+        meta: {},
+      }),
+    };
+  }) as typeof fetch;
   await handleIncomingMessage(textMsg(user, "never mind, typing instead"), client);
   assert.ok(capturedRequest, "expected AI_CHAT to still be active after the too-long fallback");
 

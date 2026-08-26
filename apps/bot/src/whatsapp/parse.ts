@@ -8,6 +8,7 @@
 import type {
   IncomingMessage,
   MetaMessage,
+  MetaStatus,
   MetaWebhookPayload,
 } from "./types";
 
@@ -86,8 +87,9 @@ export function parseWebhook(body: unknown): IncomingMessage[] {
 
     for (const change of changes) {
       // `statuses` (delivery/read receipts for messages WE sent) show up on
-      // this same webhook field — we deliberately ignore those here and
-      // only look at `messages` (things a user sent to us).
+      // this same webhook field — ignored here, see parseStatuses() below
+      // for those; this function only looks at `messages` (things a user
+      // sent to us).
       const messages = change?.value?.messages;
       if (!Array.isArray(messages)) continue;
 
@@ -103,6 +105,38 @@ export function parseWebhook(body: unknown): IncomingMessage[] {
           ?.profile?.name;
         const normalized = normalizeMessage(message, profileName);
         if (normalized) results.push(normalized);
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * The `statuses` counterpart to parseWebhook() above — delivery/read/failed
+ * receipts for messages WE sent, keyed by their wamid. See
+ * whatsapp/deliveryTracker.ts for what consumes these.
+ *
+ * @param body The same raw webhook body passed to parseWebhook().
+ */
+export function parseStatuses(body: unknown): MetaStatus[] {
+  const payload = body as Partial<MetaWebhookPayload> | null | undefined;
+  const entries = payload?.entry;
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  const results: MetaStatus[] = [];
+
+  for (const entry of entries) {
+    const changes = entry?.changes;
+    if (!Array.isArray(changes)) continue;
+
+    for (const change of changes) {
+      const statuses = change?.value?.statuses;
+      if (!Array.isArray(statuses)) continue;
+      for (const status of statuses) {
+        if (status?.id && status.status) results.push(status);
       }
     }
   }

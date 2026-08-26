@@ -14,8 +14,9 @@
 import type { FastifyInstance } from "fastify";
 import { config } from "../config";
 import { whatsAppClient } from "../whatsapp/client";
-import { parseWebhook } from "../whatsapp/parse";
-import type { IncomingMessage } from "../whatsapp/types";
+import { parseWebhook, parseStatuses } from "../whatsapp/parse";
+import type { IncomingMessage, MetaStatus } from "../whatsapp/types";
+import { recordStatus } from "../whatsapp/deliveryTracker";
 import { handleIncomingMessage } from "../flow/engine";
 
 interface VerifyQuery {
@@ -52,6 +53,13 @@ async function processIncoming(messages: IncomingMessage[]): Promise<void> {
   }
 }
 
+/** Feeds delivery/read/failed receipts into deliveryTracker — see flow/aiChat.ts for what waits on these. Can't throw: recordStatus is plain Map bookkeeping. */
+function processStatuses(statuses: MetaStatus[]): void {
+  for (const status of statuses) {
+    recordStatus(status.id, status.status);
+  }
+}
+
 export function registerWebhookRoutes(app: FastifyInstance): void {
   app.get<{ Querystring: VerifyQuery }>("/webhook", async (request, reply) => {
     const { "hub.mode": mode, "hub.verify_token": token, "hub.challenge": challenge } =
@@ -67,6 +75,7 @@ export function registerWebhookRoutes(app: FastifyInstance): void {
 
   app.post("/webhook", async (request, reply) => {
     const messages = parseWebhook(request.body);
+    processStatuses(parseStatuses(request.body));
 
     // Fire and forget on purpose: Meta wants a fast 200 (it will retry the
     // whole webhook delivery if we're slow), and a WhatsApp API hiccup on

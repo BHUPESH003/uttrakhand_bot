@@ -50,6 +50,12 @@ function isMediaInfoResponse(body: unknown): body is MediaInfoResponse {
   );
 }
 
+/** Every successful send response looks like `{ messages: [{ id: "wamid...." }] }`. */
+function extractWamid(response: unknown): string | undefined {
+  const messages = (response as { messages?: { id?: string }[] } | undefined)?.messages;
+  return messages?.[0]?.id;
+}
+
 /**
  * Meta enforces these character limits server-side and rejects the whole
  * message with a 400 if any is exceeded (error 131009) — checking here
@@ -348,14 +354,21 @@ export class WhatsAppClient {
    * handoff (see ai-voice-handoff-contract.html). Same "public HTTPS URL,
    * Meta fetches it" pattern as sendImage/sendDocument — the Cloud API's
    * audio message type has no caption field, unlike image/document.
+   *
+   * Returns the sent message's wamid (when Meta's response includes one) so
+   * a caller can wait for its actual delivery via whatsapp/deliveryTracker
+   * — a 200 here only means Meta *queued* the message, not that it's
+   * reached the device yet, which matters when something needs to render
+   * after it (see flow/aiChat.ts).
    */
-  async sendAudio(to: string, audioUrl: string): Promise<void> {
-    await this.post({
+  async sendAudio(to: string, audioUrl: string): Promise<string | undefined> {
+    const response = await this.post({
       messaging_product: "whatsapp",
       to,
       type: "audio",
       audio: { link: audioUrl },
     });
+    return extractWamid(response);
   }
 
   /**

@@ -8,11 +8,17 @@ import { logMessage } from "db";
 import type { WhatsAppClient } from "../whatsapp/client";
 import type { OutgoingAction } from "./types";
 
+/**
+ * Returns the sent message's wamid when the send method surfaces one
+ * (currently just sendAudio — see whatsapp/deliveryTracker.ts for why
+ * flow/aiChat.ts needs it) and `undefined` otherwise.
+ */
 export async function executeAction(
   client: WhatsAppClient,
   to: string,
   action: OutgoingAction,
-): Promise<void> {
+): Promise<string | undefined> {
+  let wamid: string | undefined;
   switch (action.kind) {
     case "sendText":
       await client.sendText(to, action.text);
@@ -24,7 +30,7 @@ export async function executeAction(
       await client.sendDocument(to, action.documentUrl, action.filename, action.caption);
       break;
     case "sendAudio":
-      await client.sendAudio(to, action.audioUrl);
+      wamid = await client.sendAudio(to, action.audioUrl);
       break;
     case "sendReplyButtons":
       await client.sendReplyButtons(to, action.body, action.buttons);
@@ -47,4 +53,6 @@ export async function executeAction(
     status: "sent",
     payload: action,
   });
+
+  return wamid;
 }
