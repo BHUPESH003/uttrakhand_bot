@@ -21,6 +21,17 @@ export interface MetaMessage {
   text?: {
     body: string;
   };
+  // Present when type === "audio" — a voice note or shared audio file. The
+  // webhook never carries the bytes themselves, only this id: fetch a
+  // short-lived download URL for it via WhatsAppClient.getMediaInfo.
+  audio?: {
+    id: string;
+    mime_type: string; // e.g. "audio/ogg; codecs=opus" for an in-app voice note
+    // true for a voice note recorded in-app (push-to-talk); absent/false for
+    // a shared audio file forwarded from elsewhere.
+    voice?: boolean;
+    sha256?: string;
+  };
   // Present when the user tapped a button or list row we sent earlier.
   interactive?: {
     type: string; // "button_reply" | "list_reply"
@@ -85,13 +96,19 @@ export interface MetaWebhookPayload {
 export interface IncomingMessage {
   from: string;
   messageId: string;
-  type: "text" | "button_reply" | "list_reply" | "other";
+  type: "text" | "button_reply" | "list_reply" | "audio" | "other";
   /** Set when type === "text". */
   text?: string;
   /** Set when type is a button/list reply: the id you assigned that button/row. */
   replyId?: string;
   /** Set when type is a button/list reply: the title text that was shown. */
   replyTitle?: string;
+  /** Set when type === "audio": Meta's media id — pass to WhatsAppClient.getMediaInfo to get a download URL. */
+  mediaId?: string;
+  /** Set when type === "audio": Meta's reported MIME type, e.g. "audio/ogg; codecs=opus". */
+  mimeType?: string;
+  /** Set when type === "audio": true for an in-app voice note, false/absent for a shared audio file. */
+  isVoiceNote?: boolean;
   /** WhatsApp profile display name, from the webhook's `contacts[]` block, when present. */
   profileName?: string;
   timestamp: string;

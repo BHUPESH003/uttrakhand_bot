@@ -18,6 +18,7 @@ export type OutgoingAction =
   | { kind: "sendText"; text: string }
   | { kind: "sendImage"; imageUrl: string; caption?: string }
   | { kind: "sendDocument"; documentUrl: string; filename?: string; caption?: string }
+  | { kind: "sendAudio"; audioUrl: string }
   | { kind: "sendReplyButtons"; body: string; buttons: ReplyButton[] }
   | {
       kind: "sendList";

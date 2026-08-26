@@ -2,8 +2,9 @@
 
 Quick reference for configuring and debugging the AI service integration
 (`apps/bot/src/ai/`, `apps/bot/src/flow/aiChat.ts`). Contract/schema lives
-in `ai-handoff-contract.html` at the repo root — this doc is just the
-"how do I run/debug it" side.
+in `ai-handoff-contract.html` (text) and `ai-voice-handoff-contract.html`
+(voice notes) at the repo root — this doc is just the "how do I run/debug
+it" side.
 
 ## Env vars
 
@@ -14,6 +15,7 @@ need these. Add them to `apps/bot/.env` on the VM (real file, not
 ```
 AI_SERVICE_URL=https://example.com/uk-eseva
 AI_SERVICE_TOKEN=<shared secret from the AI team>
+AI_VOICE_MAX_AUDIO_BYTES=2000000   # optional, defaults to 2MB — see ai-voice-handoff-contract.html#media-limits
 ```
 
 **`AI_SERVICE_URL` must be the base URL only, no path suffix.** The bot
@@ -70,6 +72,14 @@ send a message, then read the sequence:
   the message never reached `handleAiChatTurn` at all. Confirm the session
   is actually in the `AI_CHAT` state (e.g. the automated-assistant
   disclosure text was sent right after tapping the menu row).
+
+For a voice note specifically, look for a `[whatsapp] -> GET .../{media-id}`
+line just before the `[ai-chat] -> POST` — that's the media-info lookup
+(`WhatsAppClient.getMediaInfo`) used to fetch the download URL and check the
+size cap. If it's missing or errors, the voice note never even got
+downloaded — check `isVoiceNote` is true for the incoming message (a shared
+audio file, not an in-app voice note, is rejected before this point) and
+that `WHATSAPP_TOKEN` still has access to the media endpoint.
 
 Fallback if you don't have log access: every attempt is also logged to
 Postgres, request before the call and response only on success —

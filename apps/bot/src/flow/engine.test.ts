@@ -60,9 +60,22 @@ async function main() {
 
   class RecordingClient extends WhatsAppClient {
     calls: Call[] = [];
+    // Voice-note tests below set this to control what getMediaInfo returns,
+    // instead of stubbing global fetch — these two methods hit different
+    // Graph API endpoints than post()'s /messages, so they need their own
+    // seam (see whatsapp/client.ts).
+    mediaInfoOverride: { url: string; mimeType: string; fileSizeBytes: number } | null = null;
+
     protected override async post(body: unknown): Promise<unknown> {
       this.calls.push(body as Call);
       return {};
+    }
+    override async getMediaInfo(mediaId: string) {
+      if (!this.mediaInfoOverride) throw new Error(`no mediaInfoOverride set for ${mediaId}`);
+      return this.mediaInfoOverride;
+    }
+    override async downloadMediaAsBase64(_url: string): Promise<string> {
+      return Buffer.from("fake voice note bytes").toString("base64");
     }
   }
 
@@ -75,6 +88,20 @@ async function main() {
     kind: "button_reply" | "list_reply" = "button_reply",
   ): IncomingMessage {
     return { from, messageId: randomUUID(), type: kind, replyId, replyTitle: replyId, timestamp: "0" };
+  }
+  function audioMsg(
+    from: string,
+    opts: { mediaId?: string; mimeType?: string; isVoiceNote?: boolean } = {},
+  ): IncomingMessage {
+    return {
+      from,
+      messageId: randomUUID(),
+      type: "audio",
+      mediaId: opts.mediaId ?? "media-123",
+      mimeType: opts.mimeType ?? "audio/ogg; codecs=opus",
+      isVoiceNote: opts.isVoiceNote ?? true,
+      timestamp: "0",
+    };
   }
 
   const client = new RecordingClient();
@@ -387,7 +414,71 @@ async function main() {
   assert.equal(last().interactive.type, "button");
   assert.deepEqual(buttonIds(last()), ["back_to_menu"]);
 
-  // 22. AI service failures fall back gracefully — never a raw error — and
+  // 22. A voice note in AI_CHAT is downloaded from Meta and relayed to the
+  // AI service as base64 (ai-voice-handoff-contract.html#request); an
+  // `audio` response block renders as a real WhatsApp audio message.
+  await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
+  await handleIncomingMessage(replyMsg(user, "menu_chat"), client);
+  client.mediaInfoOverride = {
+    url: "https://lookaside.fbsbx.com/fake-media-url",
+    mimeType: "audio/ogg; codecs=opus",
+    fileSizeBytes: 50_000,
+  };
+  globalThis.fetch = (async (_url: string, init: any) => {
+    capturedRequest = JSON.parse(init.body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        contractVersion: "1.1",
+        requestId: capturedRequest.requestId,
+        conversationId: capturedRequest.conversationId,
+        messages: [{ type: "audio", audioUrl: "https://example.com/tts/reply.ogg" }],
+        control: { action: "continue", reason: null },
+        meta: { intent: "faq_voice", confidence: 0.88 },
+      }),
+    };
+  }) as typeof fetch;
+
+  await handleIncomingMessage(audioMsg(user), client);
+  assert.equal(capturedRequest.message.type, "audio");
+  assert.equal(capturedRequest.message.text, null);
+  assert.equal(capturedRequest.message.audio.encoding, "base64");
+  assert.equal(capturedRequest.message.audio.fileSizeBytes, 50_000);
+  assert.ok(capturedRequest.message.audio.data.length > 0);
+  // The audio block, then our guaranteed back-to-menu button appended after.
+  const audioCall = client.calls[client.calls.length - 2]!;
+  assert.equal(audioCall.type, "audio");
+  assert.equal(audioCall.audio.link, "https://example.com/tts/reply.ogg");
+  assert.equal(last().interactive.type, "button");
+  assert.deepEqual(buttonIds(last()), ["back_to_menu"]);
+
+  // 23. A voice note over the size cap gets a graceful "too long" fallback
+  // instead of being forwarded — and stays in AI_CHAT so the user can retry
+  // with a shorter note or just type (ai-voice-handoff-contract.html#media-limits).
+  client.mediaInfoOverride = {
+    url: "https://lookaside.fbsbx.com/fake-media-url",
+    mimeType: "audio/ogg; codecs=opus",
+    fileSizeBytes: 5_000_000, // over the 2MB default cap
+  };
+  await handleIncomingMessage(audioMsg(user), client);
+  assert.equal(last().interactive.type, "button");
+  assert.match(last().interactive.body.text, /too long/);
+  assert.deepEqual(buttonIds(last()), ["back_to_menu"]);
+
+  // Still in AI_CHAT afterward: a normal text message keeps going to the AI
+  // service, rather than falling back to MAIN_MENU's unrecognized-input path.
+  capturedRequest = undefined;
+  await handleIncomingMessage(textMsg(user, "never mind, typing instead"), client);
+  assert.ok(capturedRequest, "expected AI_CHAT to still be active after the too-long fallback");
+
+  // 24. A shared audio file (not an in-app voice note) is rejected with its
+  // own fallback, also staying in AI_CHAT — this phase only accepts voice
+  // notes recorded directly in WhatsApp.
+  await handleIncomingMessage(audioMsg(user, { isVoiceNote: false }), client);
+  assert.match(last().interactive.body.text, /voice notes recorded here in WhatsApp/);
+
+  // 25. AI service failures fall back gracefully — never a raw error — and
   // hand back to the main menu.
   await handleIncomingMessage(replyMsg(user, "back_to_menu"), client);
   await handleIncomingMessage(replyMsg(user, "menu_chat"), client);

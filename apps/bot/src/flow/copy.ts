@@ -90,9 +90,13 @@ const en = {
     "🤔 Sorry, I didn't quite understand that. Here's the menu again:",
 
   ai_chat_intro:
-    "🤖 *You're now chatting with an automated assistant.*\n\nAsk me anything about certificate services and I'll do my best to help. Tap *Back to Main Menu* anytime to return to the regular menu.",
+    "🤖 *You're now chatting with an automated assistant.*\n\nAsk me anything about certificate services — by typing or sending a voice note — and I'll do my best to help. Tap *Back to Main Menu* anytime to return to the regular menu.",
   ai_chat_error_body:
     "🤔 Sorry, I'm having trouble responding right now. Please try again in a moment, or head back to the menu.",
+  ai_chat_voice_too_long:
+    "🎙️ That voice note is a bit too long for me to process. Please try a shorter one, or just type your question instead.",
+  ai_chat_voice_unsupported:
+    "🎙️ I can only listen to voice notes recorded here in WhatsApp. Please record one directly, or type your question instead.",
 };
 
 const hi: Record<keyof typeof en, string> = {
@@ -161,9 +165,13 @@ const hi: Record<keyof typeof en, string> = {
     "🤔 क्षमा करें, मुझे यह ठीक से समझ नहीं आया। यहां मेनू फिर से है:",
 
   ai_chat_intro:
-    "🤖 *आप अभी एक स्वचालित सहायक से बात कर रहे हैं।*\nप्रमाणपत्र सेवाओं से जुड़ा कोई भी सवाल पूछें, मैं मदद करने की पूरी कोशिश करूंगा। मुख्य मेनू पर लौटने के लिए कभी भी *Back to Main Menu* दबाएं।",
+    "🤖 *आप अभी एक स्वचालित सहायक से बात कर रहे हैं।*\nप्रमाणपत्र सेवाओं से जुड़ा कोई भी सवाल टाइप करें या वॉइस नोट भेजें, मैं मदद करने की पूरी कोशिश करूंगा। मुख्य मेनू पर लौटने के लिए कभी भी *Back to Main Menu* दबाएं।",
   ai_chat_error_body:
     "🤔 क्षमा करें, अभी जवाब देने में समस्या आ रही है। कृपया थोड़ी देर बाद पुनः प्रयास करें, या मेनू पर वापस जाएं।",
+  ai_chat_voice_too_long:
+    "🎙️ यह वॉइस नोट थोड़ा लंबा है, मैं इसे प्रोसेस नहीं कर सकता। कृपया छोटा वॉइस नोट भेजें, या अपना सवाल टाइप करें।",
+  ai_chat_voice_unsupported:
+    "🎙️ मैं केवल यहीं व्हाट्सएप पर रिकॉर्ड किए गए वॉइस नोट सुन सकता हूं। कृपया सीधे रिकॉर्ड करें, या अपना सवाल टाइप करें।",
 };
 
 export const copy = { en, hi };

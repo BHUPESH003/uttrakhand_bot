@@ -23,6 +23,9 @@ export async function executeAction(
     case "sendDocument":
       await client.sendDocument(to, action.documentUrl, action.filename, action.caption);
       break;
+    case "sendAudio":
+      await client.sendAudio(to, action.audioUrl);
+      break;
     case "sendReplyButtons":
       await client.sendReplyButtons(to, action.body, action.buttons);
       break;

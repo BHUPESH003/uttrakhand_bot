@@ -1,0 +1,847 @@
+<title>e-Seva AI Voice Handoff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --bg: #f4f5fa;
+    --surface: #ffffff;
+    --surface-2: #eef0f7;
+    --ink: #141b30;
+    --muted: #5b6478;
+    --faint: #8a91a6;
+    --line: #dde1ec;
+    --line-strong: #c7ccdc;
+
+    --navy-900: #0f1830;
+    --navy-700: #1c3157;
+    --navy-500: #2f4f7c;
+    --navy-100: #d3dbe8;
+    --navy-50: #eef1f6;
+
+    --green-700: #124f26;
+    --green-600: #186530;
+    --green-500: #1f7a3d;
+    --green-100: #c9e8d3;
+    --green-50: #eaf6ee;
+
+    --warn-ink: #7a4b06;
+    --warn-bg: #fdf1dc;
+    --warn-line: #f0d6a3;
+
+    --danger-ink: #8c2318;
+    --danger-bg: #fbe9e7;
+    --danger-line: #f0bcb4;
+
+    --code-bg: #f3f4fa;
+    --code-ink: #1c2740;
+    --code-line: #dfe3ef;
+
+    --shadow: 0 1px 2px rgba(20, 27, 48, 0.04), 0 8px 24px rgba(20, 27, 48, 0.05);
+    --radius: 10px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c1120;
+      --surface: #121829;
+      --surface-2: #171f34;
+      --ink: #eef1f8;
+      --muted: #9aa2ba;
+      --faint: #6d7590;
+      --line: #262f47;
+      --line-strong: #333d5a;
+
+      --navy-900: #0b1122;
+      --navy-700: #cbd7ee;
+      --navy-500: #8fa8d1;
+      --navy-100: #26365a;
+      --navy-50: #182238;
+
+      --green-700: #bfe8cd;
+      --green-600: #7bd39b;
+      --green-500: #4fc27c;
+      --green-100: #1c3a29;
+      --green-50: #142a1e;
+
+      --warn-ink: #f5d38f;
+      --warn-bg: #2c2110;
+      --warn-line: #5a4520;
+
+      --danger-ink: #f3a89e;
+      --danger-bg: #2c1613;
+      --danger-line: #5a2a24;
+
+      --code-bg: #0f1526;
+      --code-ink: #dbe1f2;
+      --code-line: #263151;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0c1120;
+    --surface: #121829;
+    --surface-2: #171f34;
+    --ink: #eef1f8;
+    --muted: #9aa2ba;
+    --faint: #6d7590;
+    --line: #262f47;
+    --line-strong: #333d5a;
+
+    --navy-900: #0b1122;
+    --navy-700: #cbd7ee;
+    --navy-500: #8fa8d1;
+    --navy-100: #26365a;
+    --navy-50: #182238;
+
+    --green-700: #bfe8cd;
+    --green-600: #7bd39b;
+    --green-500: #4fc27c;
+    --green-100: #1c3a29;
+    --green-50: #142a1e;
+
+    --warn-ink: #f5d38f;
+    --warn-bg: #2c2110;
+    --warn-line: #5a4520;
+
+    --danger-ink: #f3a89e;
+    --danger-bg: #2c1613;
+    --danger-line: #5a2a24;
+
+    --code-bg: #0f1526;
+    --code-ink: #dbe1f2;
+    --code-line: #263151;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .devanagari { font-family: "Noto Sans Devanagari", "IBM Plex Sans", sans-serif; }
+
+  a { color: var(--green-600); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--green-500);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3, h4 { text-wrap: balance; font-family: "IBM Plex Sans", sans-serif; color: var(--ink); }
+
+  code, pre, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  .doc {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 48px;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 24px 96px;
+  }
+
+  @media (max-width: 900px) {
+    .doc { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- sidebar ---------- */
+  .toc-wrap { position: relative; }
+  .toc {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .toc { position: static; }
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .brand .mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--green-600);
+  }
+  .brand .mark::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--green-500);
+    transform: rotate(45deg);
+    flex: none;
+  }
+  .brand h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.25;
+  }
+  .brand p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .status-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .status-card .row { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); }
+  .status-card .row b { color: var(--ink); font-weight: 600; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    border: 1px solid var(--warn-line);
+  }
+  .pill::before { content: "●"; font-size: 8px; }
+
+  nav.sections { display: flex; flex-direction: column; gap: 2px; }
+  nav.sections a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13.5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-left: 2px solid transparent;
+  }
+  nav.sections a:hover { color: var(--ink); background: var(--surface-2); }
+  nav.sections .grp {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 0 10px;
+  }
+
+  /* ---------- content ---------- */
+  main { min-width: 0; }
+
+  .lede {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 62ch;
+    margin: 6px 0 0;
+  }
+
+  section { padding-top: 56px; scroll-margin-top: 24px; }
+  section:first-of-type { padding-top: 0; }
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--green-600);
+    margin: 0 0 8px;
+  }
+  h2 { font-size: 26px; margin: 0 0 6px; }
+  h2 + .sec-sub { color: var(--muted); margin: 0 0 24px; max-width: 68ch; }
+  h3 { font-size: 18px; margin: 28px 0 10px; }
+  h4 { font-size: 14.5px; margin: 20px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  p { max-width: 72ch; }
+  ul, ol { max-width: 70ch; padding-left: 1.3em; }
+  li + li { margin-top: 6px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  /* architecture diagram */
+  .arch {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 20px 0 8px;
+    overflow-x: auto;
+  }
+  .arch-node {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    min-width: 168px;
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .arch-node .label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+  .arch-node .name { font-size: 15px; font-weight: 600; }
+  .arch-node .sub { font-size: 12.5px; color: var(--muted); }
+  .arch-node.accent { border-color: var(--green-500); background: var(--green-50); }
+  .arch-node.accent .name { color: var(--green-700); }
+  .arch-arrow {
+    flex: 0 0 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--faint);
+    font-size: 13px;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .arch-arrow span { white-space: nowrap; font-size: 10.5px; }
+  .arch-arrow svg { width: 40px; height: 14px; }
+
+  /* lifecycle steps */
+  .steps { display: flex; flex-direction: column; margin: 20px 0; }
+  .step { display: grid; grid-template-columns: 32px 1fr; gap: 16px; padding-bottom: 22px; position: relative; }
+  .step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 30px;
+    bottom: -4px;
+    width: 1px;
+    background: var(--line-strong);
+  }
+  .step .num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--navy-50);
+    color: var(--navy-700);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+    font-family: "IBM Plex Mono", monospace;
+    z-index: 1;
+  }
+  .step .txt b { display: block; margin-bottom: 2px; }
+  .step .txt p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  /* code blocks */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--code-line);
+    border-radius: var(--radius);
+    margin: 14px 0 22px;
+    overflow: hidden;
+  }
+  .code-block .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--code-line);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .code-block .bar .tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    color: var(--code-ink);
+  }
+  .method {
+    display: inline-flex;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    background: var(--green-100);
+    color: var(--green-700);
+    margin-right: 8px;
+  }
+  .code-block pre {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--code-ink);
+  }
+  .code-block code { font-size: inherit; }
+
+  .tok-key { color: var(--navy-500); }
+  .tok-str { color: var(--green-600); }
+  .tok-num { color: #a2673f; }
+  .tok-bool { color: #8451c9; }
+  .tok-com { color: var(--faint); font-style: italic; }
+
+  /* tables */
+  .table-wrap { overflow-x: auto; margin: 14px 0 24px; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 560px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th {
+    background: var(--surface-2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td .fname, th .fname { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink); }
+  td.num { font-variant-numeric: tabular-nums; }
+  .req { color: var(--danger-ink); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .opt { color: var(--faint); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+
+  /* callouts */
+  .callout {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    margin: 16px 0 24px;
+    max-width: 76ch;
+    font-size: 14.5px;
+  }
+  .callout .icon { flex: none; font-size: 16px; line-height: 1.5; }
+  .callout.warn { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
+  .callout.danger { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger-ink); }
+  .callout.info { background: var(--navy-50); border-color: var(--navy-100); color: var(--ink); }
+  .callout p { margin: 0; max-width: none; }
+  .callout p + p { margin-top: 6px; }
+
+  /* id chips (reserved control ids) */
+  .chip { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; background: var(--navy-50); color: var(--navy-700); padding: 2px 7px; border-radius: 6px; border: 1px solid var(--navy-100); white-space: nowrap; }
+
+  /* message-kind cards for response contract */
+  .kind-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .kind-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: var(--surface);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .kind-card.new { border-color: var(--green-500); background: var(--green-50); }
+  .kind-card .k { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--green-600); font-weight: 600; }
+  .kind-card .d { font-size: 13px; color: var(--muted); }
+  .kind-card .lim { font-size: 11.5px; color: var(--faint); border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 2px; }
+
+  /* wa message mock */
+  .wa-mock {
+    background: #0b1512;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
+    background-size: 14px 14px;
+    border-radius: var(--radius);
+    padding: 18px;
+    margin: 16px 0 24px;
+    max-width: 360px;
+  }
+  .wa-bubble {
+    background: #1f2c26;
+    color: #eaf3ee;
+    padding: 9px 12px;
+    border-radius: 8px 8px 8px 2px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    max-width: 92%;
+  }
+  .wa-bubble b { color: #fff; }
+  .wa-voicebar {
+    display: flex; align-items: center; gap: 8px;
+    background: #1f2c26; color: #7bd39b;
+    padding: 10px 12px; border-radius: 8px 8px 8px 2px;
+    font-size: 12.5px; margin-bottom: 8px; max-width: 92%;
+  }
+  .wa-voicebar .wave { flex: 1; height: 16px; background: repeating-linear-gradient(90deg, #7bd39b 0 2px, transparent 2px 5px); opacity: 0.6; border-radius: 2px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+  .good, .bad { border-radius: var(--radius); padding: 14px 16px; border: 1px solid var(--line); }
+  .good { background: var(--green-50); border-color: var(--green-100); }
+  .bad { background: var(--danger-bg); border-color: var(--danger-line); }
+  .good .tag, .bad .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .good .tag { color: var(--green-700); }
+  .bad .tag { color: var(--danger-ink); }
+  .good pre, .bad pre { white-space: pre-wrap; font-size: 13px; margin: 8px 0 0; font-family: "IBM Plex Mono", monospace; line-height: 1.6; }
+
+  .checklist { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; max-width: 70ch; }
+  .checklist li { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; }
+  .checklist li::before { content: "?"; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--navy-100); color: var(--navy-700); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; font-family: "IBM Plex Mono", monospace; }
+
+  .decided { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; max-width: 70ch; }
+  .decided li { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; }
+  .decided li::before { content: "✓"; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--green-100); color: var(--green-700); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; font-family: "IBM Plex Mono", monospace; }
+
+  hr.div { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+
+  footer.doc-foot { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12.5px; }
+</style>
+
+<div class="doc">
+  <div class="toc-wrap">
+    <div class="toc">
+      <div class="brand">
+        <span class="mark">Uttarakhand e-Seva</span>
+        <h1>AI Voice Handoff — API Contract</h1>
+        <p>Voice-note extension to the "Chat with us" contract, v1.1-draft</p>
+      </div>
+
+      <div class="status-card">
+        <span class="pill">Draft — extends v1.0 text contract</span>
+        <div class="row"><span>Owner</span><b>Bot engineering</b></div>
+        <div class="row"><span>For</span><b>AI team review</b></div>
+        <div class="row"><span>Trigger</span><b>Voice note sent inside "Chat with us"</b></div>
+      </div>
+
+      <nav class="sections">
+        <a href="#overview">Overview &amp; scope</a>
+        <a href="#lifecycle">Conversation lifecycle</a>
+        <div class="grp">Contract</div>
+        <a href="#request">Request — Bot → AI</a>
+        <a href="#response">Response — AI → Bot</a>
+        <a href="#reused">Reused from v1.0</a>
+        <div class="grp">Guardrails</div>
+        <a href="#media-limits">Media formats &amp; limits</a>
+        <a href="#reliability">Auth, timeouts &amp; errors</a>
+        <a href="#compliance">Compliance notes</a>
+        <div class="grp">Beyond the contract</div>
+        <a href="#ux">UX recommendations</a>
+        <a href="#open-questions">Decided &amp; still open</a>
+      </nav>
+    </div>
+  </div>
+
+  <main>
+
+    <section id="overview">
+      <p class="eyebrow">Overview</p>
+      <h2>Same escape hatch, one more input/output modality</h2>
+      <p class="lede">This is an <b>additive extension</b> to <code>ai-handoff-contract.html</code> (v1.0), not a new integration. Once a user is inside <b>Chat with us</b>, they'll now be able to send a voice note instead of typing, and your service can reply with a spoken audio message instead of (or alongside) text. Everything about the lifecycle, <code>conversationId</code>, reserved <code>sys:*</code> control IDs, and the 3-block-per-turn cap from v1.0 still applies unchanged — this document only covers what's new: the audio message shape, and the new <code>audio</code> response block.</p>
+
+      <div class="callout info">
+        <span class="icon">i</span>
+        <div>
+          <p><b>Scope of this document:</b> how a voice note gets from the user to your API, and how a spoken reply gets back to the user. No bot code changes are in flight against this yet — same as v1.0, treat field names as proposed.</p>
+        </div>
+      </div>
+
+      <h3>Where it sits</h3>
+      <div class="arch">
+        <div class="arch-node">
+          <span class="label">Channel</span>
+          <span class="name">WhatsApp user</span>
+          <span class="sub">Sends a voice note inside "Chat with us"</span>
+        </div>
+        <div class="arch-arrow"><svg viewBox="0 0 40 14"><line x1="0" y1="7" x2="34" y2="7" stroke="currentColor" stroke-width="1.5"/><path d="M28 2 L36 7 L28 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <div class="arch-node accent">
+          <span class="label">This repo</span>
+          <span class="name">Bot · downloads audio from Meta</span>
+          <span class="sub">Fetches the temp media URL, reads the bytes</span>
+        </div>
+        <div class="arch-arrow">
+          <svg viewBox="0 0 40 14"><line x1="0" y1="7" x2="34" y2="7" stroke="currentColor" stroke-width="1.5"/><path d="M28 2 L36 7 L28 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>request</span>
+        </div>
+        <div class="arch-node">
+          <span class="label">Your service</span>
+          <span class="name">AI API</span>
+          <span class="sub">Owns ASR, the model, and TTS</span>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-top:-6px;">The bot never runs speech-to-text or text-to-speech itself — same principle as v1.0: it's a thin, deterministic relay. We fetch bytes off Meta because your service has no way to reach Meta's authenticated, short-lived media URLs directly.</p>
+    </section>
+
+    <section id="lifecycle">
+      <p class="eyebrow">Flow</p>
+      <h2>Conversation lifecycle</h2>
+      <p class="sec-sub">Voice notes are just another shape of "the next message" inside an already-open AI_CHAT session — there's no separate entry point or menu row for voice.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <div class="txt"><b>User is already in AI_CHAT</b><p>Same entry as v1.0 — they tapped <b>Chat with us</b>. Nothing new here; voice only matters once <span class="chip">conversationId</span> exists.</p></div>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <div class="txt"><b>User records a voice note instead of typing</b><p>The bot downloads the audio bytes from Meta (they expire in ~5 minutes and require our own bearer token — your service can't fetch them), then sends one <a href="#request">Request</a> exactly like a text turn, except <code>message.type</code> is <span class="fname">"audio"</span> and the text field is replaced by the audio payload.</p></div>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <div class="txt"><b>Bot renders the response</b><p>Same <code>messages[]</code> array as v1.0, with one addition: a new <span class="fname">audio</span> block type the bot plays back as a WhatsApp voice/audio message. You can mix it with a <span class="fname">text</span> block (e.g. a transcript) in the same turn, within the existing 3-block cap.</p></div>
+        </div>
+        <div class="step">
+          <div class="num">4</div>
+          <div class="txt"><b>Loop, or hand back</b><p>Unchanged from v1.0 — <code>control.action</code> and the reserved <span class="chip">sys:*</span> control IDs work identically whether the turn that produced them was typed or spoken.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <section id="request">
+      <p class="eyebrow">Contract · 1 of 2</p>
+      <h2>Request — Bot → AI</h2>
+      <p class="sec-sub">Same endpoint as v1.0: <code>POST {AI_SERVICE_URL}/v1/converse</code>. Only <code>message</code> changes shape when the inbound turn was a voice note.</p>
+
+      <div class="code-block">
+        <div class="bar"><span class="tag"><span class="method">POST</span>{AI_SERVICE_URL}/v1/converse</span><span>contractVersion 1.1</span></div>
+        <pre><code>{
+  <span class="tok-key">"contractVersion"</span>: <span class="tok-str">"1.1"</span>,
+  <span class="tok-key">"requestId"</span>: <span class="tok-str">"a71e2f3c-88b0-4d6a-9a41-5e0b7c9d1122"</span>,
+  <span class="tok-key">"conversationId"</span>: <span class="tok-str">"conv_8f2c1a90"</span>,
+  <span class="tok-key">"channel"</span>: <span class="tok-str">"whatsapp"</span>,
+  <span class="tok-key">"timestamp"</span>: <span class="tok-str">"2026-08-26T09:02:11.000Z"</span>,
+  <span class="tok-key">"user"</span>: { <span class="tok-com">// unchanged from v1.0</span>
+    <span class="tok-key">"waId"</span>: <span class="tok-str">"919812345678"</span>,
+    <span class="tok-key">"profileName"</span>: <span class="tok-str">"Vikas Kumar"</span>,
+    <span class="tok-key">"language"</span>: <span class="tok-str">"hi"</span>
+  },
+  <span class="tok-key">"whatsapp"</span>: { <span class="tok-com">// unchanged from v1.0</span>
+    <span class="tok-key">"phoneNumberId"</span>: <span class="tok-str">"102938475601"</span>,
+    <span class="tok-key">"incomingMessageId"</span>: <span class="tok-str">"wamid.HBgLOTE5ODEyMzQ1Njc4FRoS"</span>,
+    <span class="tok-key">"withinSessionWindow"</span>: <span class="tok-bool">true</span>,
+    <span class="tok-key">"windowExpiresAt"</span>: <span class="tok-str">"2026-08-27T08:40:12.000Z"</span>
+  },
+  <span class="tok-key">"message"</span>: {
+    <span class="tok-key">"type"</span>: <span class="tok-str">"audio"</span>,
+    <span class="tok-key">"text"</span>: <span class="tok-bool">null</span>,
+    <span class="tok-key">"replyId"</span>: <span class="tok-bool">null</span>,
+    <span class="tok-key">"replyTitle"</span>: <span class="tok-bool">null</span>,
+    <span class="tok-key">"audio"</span>: {
+      <span class="tok-key">"mimeType"</span>: <span class="tok-str">"audio/ogg; codecs=opus"</span>,
+      <span class="tok-key">"fileSizeBytes"</span>: <span class="tok-num">50000</span>,
+      <span class="tok-key">"encoding"</span>: <span class="tok-str">"base64"</span>,
+      <span class="tok-key">"data"</span>: <span class="tok-str">"T2dnUwACAAAAAAAAAAB...(truncated)"</span>
+    }
+  },
+  <span class="tok-key">"context"</span>: { <span class="tok-com">// unchanged from v1.0</span>
+    <span class="tok-key">"entryPoint"</span>: <span class="tok-str">"menu_chat_with_us"</span>,
+    <span class="tok-key">"turnNumber"</span>: <span class="tok-num">2</span>,
+    <span class="tok-key">"applicant"</span>: <span class="tok-bool">null</span>
+  }
+}</code></pre>
+      </div>
+
+      <h4>New / changed fields</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Field</th><th>Type</th><th></th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><span class="fname">message.type</span></td><td><span class="fname">text | button_reply | list_reply | audio</span></td><td class="req">req</td><td>v1.0's union gains <span class="fname">"audio"</span>. Exactly one of <span class="fname">text</span> / <span class="fname">audio</span> is populated depending on type — never both.</td></tr>
+            <tr><td><span class="fname">message.audio.mimeType</span></td><td>string</td><td class="req">req</td><td>What Meta gave us. In practice always <span class="fname">audio/ogg; codecs=opus</span> for an in-app voice note — see <a href="#media-limits">media limits</a> for why we're restricting to voice notes only in this phase.</td></tr>
+            <tr><td><span class="fname">message.audio.fileSizeBytes</span></td><td>integer</td><td class="req">req</td><td>From Meta's media-info lookup (<span class="fname">GET /{media-id}</span>), <b>not</b> the webhook payload — Meta never reports voice-note duration anywhere, only byte size. This is what our own size cap (see <a href="#media-limits">media limits</a>) is checked against before we ever download or forward the bytes.</td></tr>
+            <tr><td><span class="fname">message.audio.encoding</span></td><td><span class="fname">"base64"</span></td><td class="req">req</td><td>Fixed value for this phase. We inline the bytes rather than hosting them ourselves — see <a href="#media-limits">why</a>.</td></tr>
+            <tr><td><span class="fname">message.audio.data</span></td><td>base64 string</td><td class="req">req</td><td>The raw voice note, downloaded by us from Meta's temporary media URL. Never persisted by us beyond the audit log's request row — treat it as PII/sensitive the same as any transcript of speech would be.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="icon">⚠</span>
+        <div><p><b>Why base64-in-body, not a URL:</b> Meta's media URLs require our own bearer token and expire in minutes — we can't hand you a link you can fetch. We also don't run any object storage in this demo (nothing to host a re-shareable URL from), so inlining the bytes is the lowest-infra option for this phase. A signed-URL relay is a reasonable thing to revisit for production — see <a href="#open-questions">open questions</a>.</p></div>
+      </div>
+    </section>
+
+    <section id="response">
+      <p class="eyebrow">Contract · 2 of 2</p>
+      <h2>Response — AI → Bot</h2>
+      <p class="sec-sub">Same envelope as v1.0. The only addition is a new <code>audio</code> block kind inside <code>messages[]</code> — mix it with <code>text</code> (e.g. a transcript) or <code>buttons</code> (next-step prompt) exactly like any other block.</p>
+
+      <div class="code-block">
+        <div class="bar"><span class="tag">200 OK</span><span>same requestId + conversationId echoed back</span></div>
+        <pre><code>{
+  <span class="tok-key">"contractVersion"</span>: <span class="tok-str">"1.1"</span>,
+  <span class="tok-key">"requestId"</span>: <span class="tok-str">"a71e2f3c-88b0-4d6a-9a41-5e0b7c9d1122"</span>,
+  <span class="tok-key">"conversationId"</span>: <span class="tok-str">"conv_8f2c1a90"</span>,
+  <span class="tok-key">"messages"</span>: [
+    {
+      <span class="tok-key">"type"</span>: <span class="tok-str">"text"</span>,
+      <span class="tok-key">"text"</span>: <span class="tok-str">"_सुना: \"डोमिसाइल सर्टिफिकेट कैसे बनेगा?\"_"</span> <span class="tok-com">// optional transcript, italic</span>
+    },
+    {
+      <span class="tok-key">"type"</span>: <span class="tok-str">"audio"</span>,
+      <span class="tok-key">"audioUrl"</span>: <span class="tok-str">"https://cachatbot.pelocal.net/tts/8f2c1a90-1.ogg"</span>
+    },
+    {
+      <span class="tok-key">"type"</span>: <span class="tok-str">"buttons"</span>,
+      <span class="tok-key">"body"</span>: <span class="tok-str">"क्या मैं फॉर्म शुरू कर दूं?"</span>,
+      <span class="tok-key">"buttons"</span>: [
+        { <span class="tok-key">"id"</span>: <span class="tok-str">"sys:apply"</span>, <span class="tok-key">"title"</span>: <span class="tok-str">"Apply now"</span> }
+      ]
+    }
+  ],
+  <span class="tok-key">"control"</span>: { <span class="tok-key">"action"</span>: <span class="tok-str">"continue"</span>, <span class="tok-key">"reason"</span>: <span class="tok-bool">null</span> },
+  <span class="tok-key">"meta"</span>: { <span class="tok-key">"intent"</span>: <span class="tok-str">"faq_how_to_apply_domicile"</span>, <span class="tok-key">"confidence"</span>: <span class="tok-num">0.91</span> }
+}</code></pre>
+      </div>
+
+      <p style="font-size:13px;color:var(--muted);">Rendered, that triple looks like this on the user's phone:</p>
+      <div class="wa-mock">
+        <div class="wa-bubble" style="font-style:italic;">सुना: "डोमिसाइल सर्टिफिकेट कैसे बनेगा?"</div>
+        <div class="wa-voicebar">▶ 0:08 <span class="wave"></span></div>
+        <div class="wa-bubble">क्या मैं फॉर्म शुरू कर दूं?</div>
+      </div>
+
+      <h3>The new block kind</h3>
+      <div class="kind-grid">
+        <div class="kind-card new"><span class="k">audio</span><span class="d">A spoken reply, played inline as a WhatsApp voice/audio message. <span class="fname">audioUrl</span> must be a public HTTPS URL — Meta fetches it directly, same as <span class="fname">image</span>/<span class="fname">document</span> in v1.0.</span><span class="lim">≤ 16 MB · see <a href="#media-limits">formats</a></span></div>
+      </div>
+
+      <div class="callout danger">
+        <span class="icon">!</span>
+        <div><p><b>Asymmetric on purpose:</b> inbound audio travels as base64 (we already have the bytes, you have no storage of ours to fetch from); outbound audio travels as a URL (you already have to render/host the TTS file somewhere, and this reuses v1.0's image/document pattern exactly — no new upload code on our side).</p></div>
+      </div>
+
+      <h4>Response-side recommendation, not a requirement</h4>
+      <p>Pairing every <span class="fname">audio</span> block with a short <span class="fname">text</span> transcript (as in the example above) costs you nothing extra to generate and meaningfully helps: users in a noisy or public place, anyone who prefers reading, and our own audit log (which stores the JSON body, not decoded audio) all benefit. Not enforced by the bot, just strongly suggested.</p>
+    </section>
+
+    <section id="reused">
+      <p class="eyebrow">Unchanged</p>
+      <h2>Everything else is reused verbatim from v1.0</h2>
+      <p class="sec-sub">To avoid duplicating the whole document, here's exactly what carries over with zero changes — see <code>ai-handoff-contract.html</code> for the full detail on each.</p>
+      <ul class="decided">
+        <li><span class="chip">conversationId</span> lifecycle, minted once per "Chat with us" entry, never replayed as history by us.</li>
+        <li>Reserved <span class="chip">sys:*</span> control IDs (<span class="fname">sys:main_menu</span>, <span class="fname">sys:apply</span>, <span class="fname">sys:track</span>, <span class="fname">sys:download</span>, <span class="fname">sys:end_chat</span>) — work identically whether the turn that returned them was typed or spoken.</li>
+        <li><span class="fname">control.action</span> (<span class="fname">continue | return_to_menu | end_session</span>).</li>
+        <li>The 3-message-block-per-turn cap — an <span class="fname">audio</span> block counts toward it like any other.</li>
+        <li>Text formatting rules (WhatsApp's five-symbol markdown subset) for any <span class="fname">text</span> block in a voice-triggered turn.</li>
+        <li>Auth (<span class="fname">Authorization: Bearer</span>), the demo-phase timeout budget, and the "never a raw error to the user" fallback behavior — though see <a href="#reliability">reliability</a> below for one voice-specific addition to the budget.</li>
+      </ul>
+    </section>
+
+    <hr class="div">
+
+    <section id="media-limits">
+      <p class="eyebrow">Guardrails</p>
+      <h2>Media formats &amp; limits</h2>
+
+      <h3>Inbound — accepted for this phase</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Property</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Input restricted to</td><td>In-app voice notes only (<span class="fname">audio.voice: true</span> from Meta). A shared audio <i>file</i> (music, a forwarded recording) is rejected with a friendly "please send a voice note or type your question" fallback — out of scope for this demo, revisit for production.</td></tr>
+            <tr><td>Format</td><td class="fname">audio/ogg; codecs=opus</td></tr>
+            <tr><td>Max size accepted</td><td class="num">2 MB (configurable — <span class="fname">AI_VOICE_MAX_AUDIO_BYTES</span> on our side)</td></tr>
+            <tr><td>Max size (Meta's own hard cap)</td><td class="num">16 MB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout info">
+        <span class="icon">i</span>
+        <div><p><b>Size, not duration:</b> Meta's webhook never reports a voice note's length — only its byte size, and only after we look the media up (<span class="fname">GET /{media-id}</span>). So the cap in this implementation is size-based (2 MB ≈ well over 2 minutes at typical Opus voice-note bitrates), checked <i>before</i> we download or forward anything. If your team needs actual duration, you'd have to derive it yourselves after decoding — we don't have it to give you.</p></div>
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);">A voice note over the cap gets the same graceful fallback pattern as any other AI-turn failure in v1.0 — never a raw error, and never partially forwarded.</p>
+
+      <h3>Outbound — what we can play back</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Property</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Accepted formats</td><td>AAC, MP4, MPEG, AMR, or OGG (Opus only) — Meta's own supported set for outbound audio messages.</td></tr>
+            <tr><td>Max size</td><td class="num">16 MB</td></tr>
+            <tr><td>Hosting</td><td><span class="fname">audioUrl</span> must stay reachable at least as long as the 25s call budget (Meta fetches it right after we call <span class="fname">sendAudio</span>) — a signed URL with a short TTL is fine.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="reliability">
+      <p class="eyebrow">Operational</p>
+      <h2>Auth, timeouts &amp; errors</h2>
+      <p>Auth, retry behavior, and the error-response shape are all unchanged from v1.0 — see that document's <a href="#">reliability section</a>. One addition specific to voice:</p>
+      <ul>
+        <li><b>Timeout budget:</b> still <b>25 seconds</b> per call for this phase, same as text — but a turn now includes ASR + model + TTS on your side, plus us downloading the source audio from Meta on ours. If 25s turns out too tight once ASR/TTS latency is real, that's the first thing worth revisiting (flagged in <a href="#open-questions">open questions</a>, not decided yet).</li>
+        <li><b>Audit logging:</b> the request row logged to <span class="fname">MessageLog</span> includes the base64 payload today (mirrors how the full request is logged for text) — flagged under <a href="#compliance">compliance</a> as something to revisit before production, since it means spoken audio briefly sits in our own database.</li>
+      </ul>
+    </section>
+
+    <hr class="div">
+
+    <section id="compliance">
+      <p class="eyebrow">Guardrails</p>
+      <h2>Compliance notes specific to voice</h2>
+      <p class="sec-sub">The v1.0 document's compliance section (24h session window, content/conduct rules, data minimization, audit trail) applies unchanged. Two things are specific to voice and worth calling out separately.</p>
+
+      <h3>1. Voice carries more signal than text</h3>
+      <div class="callout warn">
+        <span class="icon">⚠</span>
+        <div>
+          <p>A recording can carry accent, background context, or a second speaker's voice in a way a typed message never does. Your service's retention policy for raw audio bytes (versus just the transcript) needs its own sign-off under the DPDP Act, 2023 — separate from, and stricter than, whatever's already agreed for <span class="fname">waId</span> / <span class="fname">profileName</span> retention in v1.0.</p>
+        </div>
+      </div>
+
+      <h3>2. The base64 payload is logged today</h3>
+      <p>Same as noted under <a href="#reliability">reliability</a>: our current audit table logs the full request body, which for a voice turn means the recording briefly lives in our Postgres instance. This is worth a joint decision before any real user data flows through this — options include redacting <span class="fname">message.audio.data</span> from the logged row, or a short TTL on that column. Not blocking for a demo, but flagged explicitly here rather than left implicit.</p>
+    </section>
+
+    <section id="ux">
+      <p class="eyebrow">Beyond the contract</p>
+      <h2>UX recommendations</h2>
+
+      <h3>Always give a text escape hatch</h3>
+      <p>Same principle as v1.0's automatic <i>Back to Menu</i> button: a user who got a voice reply should still be able to type instead of talking on their next turn — nothing about entering voice mode should feel one-way. This falls out naturally since voice notes and typed text are just two shapes of the same <span class="fname">message</span> field turn-to-turn.</p>
+
+      <h3>Transcript-first for low confidence</h3>
+      <p>When ASR confidence is low (garbled audio, background noise), prefer replying with a clarifying <span class="fname">text</span> question ("Did you mean...?") over guessing and answering the wrong question in a confident-sounding voice clip — a wrong spoken answer reads as more authoritative than a wrong typed one.</p>
+
+      <h3>Show it's processing</h3>
+      <p>Same as v1.0's typing-indicator note — worth pairing with the bot marking the voice note "read" immediately (already true today for every inbound message) so a multi-second ASR+TTS round trip doesn't feel broken.</p>
+    </section>
+
+    <section id="open-questions">
+      <p class="eyebrow">Before this ships</p>
+      <h2>Decided vs. still open</h2>
+
+      <h4>Decided</h4>
+      <ul class="decided">
+        <li>Scope limited to in-app voice notes (<span class="fname">audio.voice: true</span>) — no general audio-file uploads in this phase.</li>
+        <li>Inbound audio travels as base64 in the request body; outbound audio travels as a URL, reusing v1.0's image/document pattern.</li>
+        <li>Size-based cap on inbound voice notes (2 MB by default — see <a href="#media-limits">media limits</a> for why it's size, not duration), enforced with the same graceful-fallback pattern as any other AI-turn failure, before any bytes are downloaded or forwarded.</li>
+        <li>Reuses the v1.0 contract's <span class="chip">conversationId</span>, control IDs, and 3-block cap without modification.</li>
+      </ul>
+
+      <h4>Still open</h4>
+      <ul class="checklist">
+        <li>Is the 25-second timeout budget realistic once ASR + LLM + TTS run in sequence on your side, or does voice need its own (longer) budget?</li>
+        <li>Should raw audio bytes be redacted from our audit log, or kept with a short retention TTL, before any real user data flows through this?</li>
+        <li>Is a signed-URL relay (bot re-hosts the inbound audio briefly instead of inlining base64) worth building before production, to avoid inflating request bodies for longer voice notes?</li>
+        <li>Should a transcript <span class="fname">text</span> block be required alongside every <span class="fname">audio</span> block, or left as a recommendation (current stance)?</li>
+        <li>Is the 2 MB default cap the right tradeoff, or should it be raised/lowered once real voice-note lengths from users are seen?</li>
+      </ul>
+    </section>
+
+    <footer class="doc-foot">
+      Uttarakhand e-Seva WhatsApp bot — AI voice handoff contract, v1.1-draft, extending <code>ai-handoff-contract.html</code> v1.0. No code changes are in flight against this yet; treat every field name here as proposed, not final.
+    </footer>
+  </main>
+</div>
