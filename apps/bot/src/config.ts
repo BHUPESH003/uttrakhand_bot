@@ -55,6 +55,13 @@ const envSchema = z.object({
 
   // Sent as `Authorization: Bearer <token>` on every AI service call.
   AI_SERVICE_TOKEN: z.string().min(1, "AI_SERVICE_TOKEN is required"),
+
+  // Reject an inbound voice note larger than this instead of forwarding it
+  // to the AI service — see ai-voice-handoff-contract.html#media-limits.
+  // Meta's webhook never reports voice-note duration, only byte size (from
+  // the media-info lookup), so the cap is size-based. Default ~2MB is
+  // generously above a 2-minute clip at typical Opus voice-note bitrates.
+  AI_VOICE_MAX_AUDIO_BYTES: z.coerce.number().int().positive().default(2_000_000),
 });
 
 function loadConfig() {

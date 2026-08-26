@@ -32,6 +32,24 @@ function isMetaErrorResponse(body: unknown): body is MetaErrorResponse {
   );
 }
 
+/** Response shape for `GET /{media-id}` — see WhatsAppClient.getMediaInfo. */
+interface MediaInfoResponse {
+  url: string;
+  mime_type: string;
+  file_size: number;
+  id: string;
+}
+
+function isMediaInfoResponse(body: unknown): body is MediaInfoResponse {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    typeof (body as MediaInfoResponse).url === "string" &&
+    typeof (body as MediaInfoResponse).mime_type === "string" &&
+    typeof (body as MediaInfoResponse).file_size === "number"
+  );
+}
+
 /**
  * Meta enforces these character limits server-side and rejects the whole
  * message with a 400 if any is exceeded (error 131009) — checking here
@@ -84,6 +102,7 @@ export interface ListSection {
 export class WhatsAppClient {
   private readonly baseUrl: string;
   private readonly token: string;
+  private readonly graphApiVersion: string;
 
   constructor(options?: {
     phoneNumberId?: string;
@@ -93,6 +112,7 @@ export class WhatsAppClient {
     const phoneNumberId = options?.phoneNumberId ?? config.PHONE_NUMBER_ID;
     const version = options?.graphApiVersion ?? config.GRAPH_API_VERSION;
     this.token = options?.token ?? config.WHATSAPP_TOKEN;
+    this.graphApiVersion = version;
     this.baseUrl = `https://graph.facebook.com/${version}/${phoneNumberId}/messages`;
   }
 
@@ -321,6 +341,76 @@ export class WhatsAppClient {
         },
       },
     });
+  }
+
+  /**
+   * A spoken reply, e.g. a text-to-speech response from the AI voice
+   * handoff (see ai-voice-handoff-contract.html). Same "public HTTPS URL,
+   * Meta fetches it" pattern as sendImage/sendDocument — the Cloud API's
+   * audio message type has no caption field, unlike image/document.
+   */
+  async sendAudio(to: string, audioUrl: string): Promise<void> {
+    await this.post({
+      messaging_product: "whatsapp",
+      to,
+      type: "audio",
+      audio: { link: audioUrl },
+    });
+  }
+
+  /**
+   * Looks up a media id's short-lived download URL + metadata. The webhook
+   * never carries media bytes inline, only an opaque id (see
+   * IncomingMessage.mediaId) — this is the only way to turn that id into
+   * something fetchable. Unlike every method above, this hits a different
+   * Graph API endpoint (`/{media-id}`, not `/{phone-number-id}/messages`),
+   * so it doesn't go through `post()`.
+   *
+   * Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media
+   */
+  async getMediaInfo(
+    mediaId: string,
+  ): Promise<{ url: string; mimeType: string; fileSizeBytes: number }> {
+    const infoUrl = `https://graph.facebook.com/${this.graphApiVersion}/${mediaId}`;
+    console.log(`[whatsapp] -> GET ${infoUrl}`);
+
+    const response = await fetch(infoUrl, {
+      headers: { Authorization: `Bearer ${this.token}` },
+    });
+    const body: unknown = await response.json().catch(() => undefined);
+    console.log(`[whatsapp] <- ${response.status} ${JSON.stringify(body)}`);
+
+    if (!response.ok || !isMediaInfoResponse(body)) {
+      if (isMetaErrorResponse(body)) {
+        throw new WhatsAppApiError(body.error.message, body.error.code, body.error.fbtrace_id);
+      }
+      throw new WhatsAppApiError(
+        `Failed to look up media ${mediaId} (status ${response.status})`,
+        response.status,
+      );
+    }
+    return { url: body.url, mimeType: body.mime_type, fileSizeBytes: body.file_size };
+  }
+
+  /**
+   * Downloads the bytes from a URL returned by getMediaInfo, returned as
+   * base64 (the shape the AI voice contract's `message.audio.data` wants —
+   * see ai-voice-handoff-contract.html). That URL requires the SAME bearer
+   * token as every other Graph API call and expires after a few minutes;
+   * never cache or forward the URL itself, only what this downloads from it.
+   */
+  async downloadMediaAsBase64(mediaUrl: string): Promise<string> {
+    const response = await fetch(mediaUrl, {
+      headers: { Authorization: `Bearer ${this.token}` },
+    });
+    if (!response.ok) {
+      throw new WhatsAppApiError(
+        `Failed to download media (status ${response.status})`,
+        response.status,
+      );
+    }
+    const bytes = await response.arrayBuffer();
+    return Buffer.from(bytes).toString("base64");
   }
 
   /**

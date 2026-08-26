@@ -637,7 +637,7 @@
     <span class="tok-key">"replyTitle"</span>: <span class="tok-bool">null</span>,
     <span class="tok-key">"audio"</span>: {
       <span class="tok-key">"mimeType"</span>: <span class="tok-str">"audio/ogg; codecs=opus"</span>,
-      <span class="tok-key">"durationSec"</span>: <span class="tok-num">14</span>,
+      <span class="tok-key">"fileSizeBytes"</span>: <span class="tok-num">50000</span>,
       <span class="tok-key">"encoding"</span>: <span class="tok-str">"base64"</span>,
       <span class="tok-key">"data"</span>: <span class="tok-str">"T2dnUwACAAAAAAAAAAB...(truncated)"</span>
     }
@@ -657,7 +657,7 @@
           <tbody>
             <tr><td><span class="fname">message.type</span></td><td><span class="fname">text | button_reply | list_reply | audio</span></td><td class="req">req</td><td>v1.0's union gains <span class="fname">"audio"</span>. Exactly one of <span class="fname">text</span> / <span class="fname">audio</span> is populated depending on type — never both.</td></tr>
             <tr><td><span class="fname">message.audio.mimeType</span></td><td>string</td><td class="req">req</td><td>What Meta gave us. In practice always <span class="fname">audio/ogg; codecs=opus</span> for an in-app voice note — see <a href="#media-limits">media limits</a> for why we're restricting to voice notes only in this phase.</td></tr>
-            <tr><td><span class="fname">message.audio.durationSec</span></td><td>integer</td><td class="opt">opt</td><td>From Meta's metadata when present. Useful as a cheap pre-check before decoding.</td></tr>
+            <tr><td><span class="fname">message.audio.fileSizeBytes</span></td><td>integer</td><td class="req">req</td><td>From Meta's media-info lookup (<span class="fname">GET /{media-id}</span>), <b>not</b> the webhook payload — Meta never reports voice-note duration anywhere, only byte size. This is what our own size cap (see <a href="#media-limits">media limits</a>) is checked against before we ever download or forward the bytes.</td></tr>
             <tr><td><span class="fname">message.audio.encoding</span></td><td><span class="fname">"base64"</span></td><td class="req">req</td><td>Fixed value for this phase. We inline the bytes rather than hosting them ourselves — see <a href="#media-limits">why</a>.</td></tr>
             <tr><td><span class="fname">message.audio.data</span></td><td>base64 string</td><td class="req">req</td><td>The raw voice note, downloaded by us from Meta's temporary media URL. Never persisted by us beyond the audit log's request row — treat it as PII/sensitive the same as any transcript of speech would be.</td></tr>
           </tbody>
@@ -751,12 +751,16 @@
           <tbody>
             <tr><td>Input restricted to</td><td>In-app voice notes only (<span class="fname">audio.voice: true</span> from Meta). A shared audio <i>file</i> (music, a forwarded recording) is rejected with a friendly "please send a voice note or type your question" fallback — out of scope for this demo, revisit for production.</td></tr>
             <tr><td>Format</td><td class="fname">audio/ogg; codecs=opus</td></tr>
-            <tr><td>Max duration accepted</td><td class="num">120 seconds</td></tr>
-            <tr><td>Max size (Meta's own cap)</td><td class="num">16 MB</td></tr>
+            <tr><td>Max size accepted</td><td class="num">2 MB (configurable — <span class="fname">AI_VOICE_MAX_AUDIO_BYTES</span> on our side)</td></tr>
+            <tr><td>Max size (Meta's own hard cap)</td><td class="num">16 MB</td></tr>
           </tbody>
         </table>
       </div>
-      <p style="font-size:13.5px;color:var(--muted);">A voice note over the duration cap gets the same graceful fallback pattern as any other AI-turn failure in v1.0 — never a raw error, and never partially transcribed.</p>
+      <div class="callout info">
+        <span class="icon">i</span>
+        <div><p><b>Size, not duration:</b> Meta's webhook never reports a voice note's length — only its byte size, and only after we look the media up (<span class="fname">GET /{media-id}</span>). So the cap in this implementation is size-based (2 MB ≈ well over 2 minutes at typical Opus voice-note bitrates), checked <i>before</i> we download or forward anything. If your team needs actual duration, you'd have to derive it yourselves after decoding — we don't have it to give you.</p></div>
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);">A voice note over the cap gets the same graceful fallback pattern as any other AI-turn failure in v1.0 — never a raw error, and never partially forwarded.</p>
 
       <h3>Outbound — what we can play back</h3>
       <div class="table-wrap">
@@ -822,7 +826,7 @@
       <ul class="decided">
         <li>Scope limited to in-app voice notes (<span class="fname">audio.voice: true</span>) — no general audio-file uploads in this phase.</li>
         <li>Inbound audio travels as base64 in the request body; outbound audio travels as a URL, reusing v1.0's image/document pattern.</li>
-        <li>120-second duration cap on inbound voice notes, enforced with the same graceful-fallback pattern as any other AI-turn failure.</li>
+        <li>Size-based cap on inbound voice notes (2 MB by default — see <a href="#media-limits">media limits</a> for why it's size, not duration), enforced with the same graceful-fallback pattern as any other AI-turn failure, before any bytes are downloaded or forwarded.</li>
         <li>Reuses the v1.0 contract's <span class="chip">conversationId</span>, control IDs, and 3-block cap without modification.</li>
       </ul>
 
@@ -832,6 +836,7 @@
         <li>Should raw audio bytes be redacted from our audit log, or kept with a short retention TTL, before any real user data flows through this?</li>
         <li>Is a signed-URL relay (bot re-hosts the inbound audio briefly instead of inlining base64) worth building before production, to avoid inflating request bodies for longer voice notes?</li>
         <li>Should a transcript <span class="fname">text</span> block be required alongside every <span class="fname">audio</span> block, or left as a recommendation (current stance)?</li>
+        <li>Is the 2 MB default cap the right tradeoff, or should it be raised/lowered once real voice-note lengths from users are seen?</li>
       </ul>
     </section>
 

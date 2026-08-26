@@ -52,6 +52,16 @@ function normalizeMessage(
     }
   }
 
+  if (message.type === "audio" && message.audio?.id) {
+    return {
+      ...base,
+      type: "audio",
+      mediaId: message.audio.id,
+      mimeType: message.audio.mime_type,
+      isVoiceNote: message.audio.voice === true,
+    };
+  }
+
   // Anything else (image, document, location, unsupported, ...) — we still
   // surface it as "other" so callers know a message arrived, just with no
   // content we currently understand.
