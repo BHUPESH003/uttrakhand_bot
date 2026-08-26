@@ -35,6 +35,8 @@ import type { OutgoingAction } from "./types";
 const WHATSAPP_WINDOW_MS = 24 * 60 * 60 * 1000;
 // "Cap messages[] at 3 blocks per turn" — ai-handoff-contract.html#reliability.
 const MAX_MESSAGE_BLOCKS = 3;
+// ponytail: fixed pause, not a real delivery-ack wait — see its use below.
+const AUDIO_DELIVERY_BUFFER_MS = 1500;
 
 /** ai-handoff-contract.html#control-ids */
 const RESERVED_CONTROL_IDS: Record<string, string> = {
@@ -280,6 +282,17 @@ export async function handleAiChatTurn(
       sentCount++;
     } catch (err) {
       console.error(`[ai-chat] failed to send "${action.kind}" block, skipping it`, err);
+    }
+    // A 200 from Meta on the sendAudio POST only means the message was
+    // queued — Meta still has to fetch and process our audioUrl before it
+    // reaches the device, which measurably lags a lightweight text/button
+    // message sent right after (see the "buttons rendered before the
+    // voice note" report). This buffer is a mitigation, not a guarantee —
+    // Meta doesn't give us a synchronous "delivered" signal to wait on
+    // instead short of polling webhook status callbacks, which is more
+    // machinery than a demo needs.
+    if (action.kind === "sendAudio") {
+      await new Promise((resolve) => setTimeout(resolve, AUDIO_DELIVERY_BUFFER_MS));
     }
   }
 
