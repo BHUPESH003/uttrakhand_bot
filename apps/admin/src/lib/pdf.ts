@@ -1,6 +1,9 @@
 /**
- * Generates the certificate PDF and writes it under public/certificates so
- * Next serves it as a static asset — no separate route handler needed.
+ * Generates the certificate PDF and writes it under public/certificates.
+ * Served back out through app/api/certificates/[filename]/route.ts (reads
+ * disk fresh per request) rather than Next's default public/ static
+ * serving — that path has shown a real 404-that-sticks-until-restart bug
+ * for a file requested right after it's written, see that route's comment.
  * Returns the full public URL (ADMIN_PUBLIC_URL + path), since that's what
  * both apps/bot's WhatsApp sendDocument call and the admin UI need: a URL
  * Meta's servers can fetch directly.
@@ -694,5 +697,5 @@ export async function generateCertificatePdf(application: CertificateApplication
   const buffer = await renderPdf(application);
   const filename = `${application.referenceNumber}.pdf`;
   await writeFile(path.join(CERT_DIR, filename), buffer);
-  return `${config.ADMIN_PUBLIC_URL}/certificates/${filename}`;
+  return `${config.ADMIN_PUBLIC_URL}/api/certificates/${filename}`;
 }
