@@ -3,6 +3,13 @@
  * must be able to fetch those without a login cookie), and the header logo
  * (should render on /login too, before the user's authenticated). See
  * lib/auth.ts for why this check is demo-only.
+ *
+ * `certificates` excludes the old static public/certificates/*.pdf path
+ * (still referenced by certificatePdfPath rows generated before the
+ * app/api/certificates route existed); `api/certificates` excludes the
+ * current one (see lib/pdf.ts). Missing the latter here is exactly what
+ * caused certificates to show as "approved" with no PDF ever arriving —
+ * this proxy redirected WhatsApp's fetch of the PDF to /login instead.
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -15,5 +22,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!login|certificates|logo_uk\\.jpg|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!login|api/certificates|certificates|logo_uk\\.jpg|_next/static|_next/image|favicon.ico).*)",
+  ],
 };
