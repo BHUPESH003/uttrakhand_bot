@@ -21,10 +21,13 @@ export async function logMessage(input: LogMessageInput) {
   });
 }
 
-/** Full conversation history for one number, oldest first — the admin dashboard's read-only transcript view. */
+/** MessageLog.type for delivery receipts (sent/delivered/read/failed) — audit rows, not conversation messages. */
+export const STATUS_LOG_TYPE = "status";
+
+/** Full conversation history for one number, oldest first — the admin dashboard's read-only transcript view. Delivery receipts are excluded. */
 export async function listMessagesForNumber(mobileNumber: string) {
   return prisma.messageLog.findMany({
-    where: { mobileNumber },
+    where: { mobileNumber, type: { not: STATUS_LOG_TYPE } },
     orderBy: { createdAt: "asc" },
   });
 }

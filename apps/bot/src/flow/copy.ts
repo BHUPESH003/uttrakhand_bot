@@ -97,6 +97,72 @@ const en = {
     "🎙️ That voice note is a bit too long for me to process. Please try a shorter one, or just type your question instead.",
   ai_chat_voice_unsupported:
     "🎙️ I can only listen to voice notes recorded here in WhatsApp. Please record one directly, or type your question instead.",
+
+  // ---- Commerce demo (commerce-demo/journeys.ts). All data is fake. ----
+  menu_commerce: "🛍️ Commerce demo", // list row title, limit 24
+  commerce_menu_body:
+    "🛍️ *Commerce demo*\n_Sample brands and fake data only. No real payments._\n\nWhat would you like to do?",
+  commerce_buy: "Buy", // reply button title, limit 20
+  commerce_track: "Track order", // reply button title, limit 20
+  commerce_balance: "Check balance", // reply button title, limit 20
+  commerce_help:
+    "ℹ️ Tap a button above, or type *menu* to see the demo options. Type *hi* anytime to come back here.",
+  commerce_carousel_body: "🛒 *Choose a brand*\nSwipe to see all sample brands.",
+  commerce_card_body: "*{{brand}}*\n{{category}} · {{item}}", // carousel card body, limit 160, max 2 line breaks
+  commerce_select: "Select", // carousel quick-reply title, limit 20
+  commerce_brand_body:
+    "*{{brand}}*\n{{item}}\n\nTap *Choose amount* to pick an amount and quantity.",
+  commerce_choose_amount: "Choose amount", // flow_cta, limit 30, no emoji
+  commerce_flow_unavailable:
+    "Sorry, the amount picker isn't available right now. Please try again later.",
+  commerce_summary_body:
+    "🧾 *Order summary*\nOrder {{order}}\n\n{{brand}} · {{item}}\n{{amount}} × {{qty}} = {{subtotal}}\n{{offer_line}}*Total: {{total}}*\nPaid with points: {{points}}\nPay online: {{online}}\n\n_Demo only. No real money moves._",
+  commerce_summary_offer: "Offer {{code}}: -{{discount}}\n",
+  commerce_pay: "Pay (demo)", // reply button title, limit 20
+  commerce_cancel_order: "Cancel order", // reply button title, limit 20
+  commerce_otp_prompt:
+    "🔐 This payment uses *{{points}} points*.\nEnter the demo OTP *{{otp}}* to confirm.",
+  commerce_otp_wrong: "❌ That OTP is not correct. Enter the demo OTP *{{otp}}*.",
+  commerce_delivered:
+    "✅ *Payment received (demo)*\nOrder {{order}}\n\nYour {{item}} code:\n{{codes}}\n\n_Long-press a code to copy it._",
+  commerce_buy_another: "Buy another", // reply button title, limit 20
+  commerce_next_body: "What would you like to do next?",
+  commerce_issue_failed:
+    "⚠️ We received your payment but couldn't issue your code (order {{order}}). Your payment has been refunded (demo).",
+  commerce_cancelled: "Order {{order}} has been cancelled.",
+  commerce_cannot_cancel: "Order {{order}} can't be cancelled now. Status: {{status}}.",
+  commerce_already: "Order {{order}} is already {{status}}.",
+  commerce_order_not_found: "Sorry, we couldn't find that order.",
+  commerce_no_orders: "📦 You have no demo orders yet.",
+  commerce_orders_body: "📦 *Your recent demo orders*\nChoose one to see its status.",
+  commerce_orders_button: "View orders", // list button text, limit 20
+  commerce_order_status: "📦 *Order {{order}}*\n{{brand}} · {{total}}\n\n{{steps}}",
+  commerce_codes_label: "Code:",
+  commerce_step_placed: "Order placed",
+  commerce_step_paid: "Paid",
+  commerce_step_delivered: "Code delivered",
+  commerce_step_cancelled: "Cancelled",
+  commerce_step_failed: "Failed, refunded",
+  commerce_status_pending_payment: "awaiting payment",
+  commerce_status_processing: "processing",
+  commerce_status_delivered: "delivered",
+  commerce_status_cancelled: "cancelled",
+  commerce_status_failed: "failed",
+  commerce_balance_body:
+    "💰 *Demo points balance: {{points}}*\n_1 point = ₹1. Points are fake and only work in this demo._",
+
+  // Catalog path (COMMERCE_CATALOG_ENABLED)
+  commerce_view_product: "View product", // carousel quick-reply title, limit 20
+  commerce_catalog_prompt: "🗂️ Prefer to browse the catalog and use a cart?",
+  commerce_browse_catalog: "Browse catalog", // reply button title, limit 20
+  commerce_catalog_header: "Sample catalog", // product_list header, limit 60
+  commerce_catalog_body: "Add items to your cart and send it to order. All products are samples.",
+  commerce_other_amount_prompt: "Need an amount that isn't in the catalog?",
+  commerce_other_amount: "Other amount", // reply button title (limit 20) and flow_cta (limit 30, no emoji)
+  commerce_other_amount_body: "Choose a brand and type any amount within its range.",
+  commerce_product_body: "{{item}} worth {{amount}}. Add it to your cart and send it to order.",
+  commerce_cart_skipped: "⚠️ Some cart items aren't part of this demo and were skipped: {{items}}",
+  commerce_cart_empty: "None of the items in your cart could be ordered. Please browse the catalog again.",
 };
 
 const hi: Record<keyof typeof en, string> = {
@@ -172,6 +238,69 @@ const hi: Record<keyof typeof en, string> = {
     "🎙️ यह वॉइस नोट थोड़ा लंबा है, मैं इसे प्रोसेस नहीं कर सकता। कृपया छोटा वॉइस नोट भेजें, या अपना सवाल टाइप करें।",
   ai_chat_voice_unsupported:
     "🎙️ मैं केवल यहीं व्हाट्सएप पर रिकॉर्ड किए गए वॉइस नोट सुन सकता हूं। कृपया सीधे रिकॉर्ड करें, या अपना सवाल टाइप करें।",
+
+  // ---- कॉमर्स डेमो (commerce-demo/journeys.ts). सारा डेटा नकली है। ----
+  menu_commerce: "🛍️ कॉमर्स डेमो",
+  commerce_menu_body:
+    "🛍️ *कॉमर्स डेमो*\n_केवल सैंपल ब्रांड और नकली डेटा। कोई असली भुगतान नहीं।_\n\nआप क्या करना चाहेंगे?",
+  commerce_buy: "खरीदें",
+  commerce_track: "ऑर्डर ट्रैक करें",
+  commerce_balance: "बैलेंस देखें",
+  commerce_help:
+    "ℹ️ ऊपर दिया कोई बटन दबाएं, या डेमो विकल्प देखने के लिए *menu* टाइप करें। यहां लौटने के लिए कभी भी *hi* टाइप करें।",
+  commerce_carousel_body: "🛒 *ब्रांड चुनें*\nसभी सैंपल ब्रांड देखने के लिए स्वाइप करें।",
+  commerce_card_body: "*{{brand}}*\n{{category}} · {{item}}",
+  commerce_select: "चुनें",
+  commerce_brand_body:
+    "*{{brand}}*\n{{item}}\n\nराशि और संख्या चुनने के लिए *राशि चुनें* दबाएं।",
+  commerce_choose_amount: "राशि चुनें",
+  commerce_flow_unavailable: "क्षमा करें, राशि चुनने की सुविधा अभी उपलब्ध नहीं है। कृपया बाद में प्रयास करें।",
+  commerce_summary_body:
+    "🧾 *ऑर्डर सारांश*\nऑर्डर {{order}}\n\n{{brand}} · {{item}}\n{{amount}} × {{qty}} = {{subtotal}}\n{{offer_line}}*कुल: {{total}}*\nपॉइंट्स से भुगतान: {{points}}\nऑनलाइन भुगतान: {{online}}\n\n_केवल डेमो। कोई असली पैसा नहीं कटेगा।_",
+  commerce_summary_offer: "ऑफ़र {{code}}: -{{discount}}\n",
+  commerce_pay: "भुगतान (डेमो)",
+  commerce_cancel_order: "ऑर्डर रद्द करें",
+  commerce_otp_prompt: "🔐 इस भुगतान में *{{points}} पॉइंट्स* लगेंगे।\nपुष्टि के लिए डेमो OTP *{{otp}}* दर्ज करें।",
+  commerce_otp_wrong: "❌ यह OTP सही नहीं है। डेमो OTP *{{otp}}* दर्ज करें।",
+  commerce_delivered:
+    "✅ *भुगतान प्राप्त (डेमो)*\nऑर्डर {{order}}\n\nआपका {{item}} कोड:\n{{codes}}\n\n_कोड कॉपी करने के लिए उसे दबाकर रखें।_",
+  commerce_buy_another: "फिर से खरीदें",
+  commerce_next_body: "आगे आप क्या करना चाहेंगे?",
+  commerce_issue_failed:
+    "⚠️ हमें आपका भुगतान मिल गया, लेकिन कोड जारी नहीं हो सका (ऑर्डर {{order}})। आपका भुगतान वापस कर दिया गया है (डेमो)।",
+  commerce_cancelled: "ऑर्डर {{order}} रद्द कर दिया गया है।",
+  commerce_cannot_cancel: "ऑर्डर {{order}} अब रद्द नहीं हो सकता। स्थिति: {{status}}।",
+  commerce_already: "ऑर्डर {{order}} पहले से {{status}} है।",
+  commerce_order_not_found: "क्षमा करें, यह ऑर्डर नहीं मिला।",
+  commerce_no_orders: "📦 आपका अभी कोई डेमो ऑर्डर नहीं है।",
+  commerce_orders_body: "📦 *आपके हाल के डेमो ऑर्डर*\nस्थिति देखने के लिए एक चुनें।",
+  commerce_orders_button: "ऑर्डर देखें",
+  commerce_order_status: "📦 *ऑर्डर {{order}}*\n{{brand}} · {{total}}\n\n{{steps}}",
+  commerce_codes_label: "कोड:",
+  commerce_step_placed: "ऑर्डर दिया गया",
+  commerce_step_paid: "भुगतान हुआ",
+  commerce_step_delivered: "कोड भेजा गया",
+  commerce_step_cancelled: "रद्द",
+  commerce_step_failed: "विफल, राशि वापस",
+  commerce_status_pending_payment: "भुगतान बाकी",
+  commerce_status_processing: "प्रोसेस हो रहा",
+  commerce_status_delivered: "डिलीवर",
+  commerce_status_cancelled: "रद्द",
+  commerce_status_failed: "विफल",
+  commerce_balance_body:
+    "💰 *डेमो पॉइंट्स बैलेंस: {{points}}*\n_1 पॉइंट = ₹1। पॉइंट्स नकली हैं और केवल इस डेमो में चलते हैं।_",
+
+  commerce_view_product: "उत्पाद देखें",
+  commerce_catalog_prompt: "🗂️ क्या आप कैटलॉग देखकर कार्ट से ऑर्डर करना चाहेंगे?",
+  commerce_browse_catalog: "कैटलॉग देखें",
+  commerce_catalog_header: "सैंपल कैटलॉग",
+  commerce_catalog_body: "आइटम कार्ट में जोड़ें और ऑर्डर के लिए भेजें। सभी उत्पाद सैंपल हैं।",
+  commerce_other_amount_prompt: "कैटलॉग में नहीं दी गई कोई और राशि चाहिए?",
+  commerce_other_amount: "दूसरी राशि",
+  commerce_other_amount_body: "एक ब्रांड चुनें और उसकी सीमा के अंदर कोई भी राशि लिखें।",
+  commerce_product_body: "{{amount}} का {{item}}। इसे कार्ट में जोड़ें और ऑर्डर के लिए भेजें।",
+  commerce_cart_skipped: "⚠️ कार्ट के कुछ आइटम इस डेमो का हिस्सा नहीं हैं, इसलिए छोड़ दिए गए: {{items}}",
+  commerce_cart_empty: "आपके कार्ट का कोई भी आइटम ऑर्डर नहीं हो सका। कृपया कैटलॉग फिर से देखें।",
 };
 
 export const copy = { en, hi };

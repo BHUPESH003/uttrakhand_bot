@@ -1,0 +1,366 @@
+{
+  "version": "7.3",
+  "data_api_version": "4.0",
+  "routing_model": {
+    "ITEM": [
+      "CUSTOM_AMOUNT",
+      "OFFERS",
+      "REVIEW"
+    ],
+    "CUSTOM_AMOUNT": [
+      "OFFERS",
+      "REVIEW"
+    ],
+    "OTHER_AMOUNT": [
+      "OFFERS",
+      "REVIEW"
+    ],
+    "OFFERS": [
+      "REVIEW"
+    ],
+    "REVIEW": []
+  },
+  "screens": [
+    {
+      "id": "ITEM",
+      "title": "Choose amount",
+      "data": {
+        "brand_name": {
+          "type": "string",
+          "__example__": "Sample brand A"
+        },
+        "item_name": {
+          "type": "string",
+          "__example__": "Sample gift item"
+        },
+        "presets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "250",
+              "title": "₹250"
+            },
+            {
+              "id": "custom",
+              "title": "Other amount"
+            }
+          ]
+        },
+        "quantities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "1",
+              "title": "1"
+            }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "${data.brand_name}"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.item_name}"
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "amount",
+            "label": "Amount",
+            "required": true,
+            "data-source": "${data.presets}"
+          },
+          {
+            "type": "Dropdown",
+            "name": "quantity",
+            "label": "Quantity",
+            "required": true,
+            "data-source": "${data.quantities}"
+          },
+          {
+            "type": "Footer",
+            "label": "Continue",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "amount": "${form.amount}",
+                "quantity": "${form.quantity}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "CUSTOM_AMOUNT",
+      "title": "Other amount",
+      "data": {
+        "brand_name": {
+          "type": "string",
+          "__example__": "Sample brand A"
+        },
+        "helper_text": {
+          "type": "string",
+          "__example__": "Between ₹100 and ₹10,000 in steps of ₹50"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "${data.brand_name}"
+          },
+          {
+            "type": "TextInput",
+            "name": "custom_amount",
+            "label": "Amount (₹)",
+            "input-type": "number",
+            "required": true,
+            "helper-text": "${data.helper_text}"
+          },
+          {
+            "type": "Footer",
+            "label": "Continue",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "custom_amount": "${form.custom_amount}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "OTHER_AMOUNT",
+      "title": "Other amount",
+      "data": {
+        "brands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "brand_a",
+              "title": "Sample brand A",
+              "description": "Between ₹100 and ₹10,000 in steps of ₹50"
+            }
+          ]
+        },
+        "helper_text": {
+          "type": "string",
+          "__example__": "Must fit the range of the brand you chose"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "RadioButtonsGroup",
+            "name": "brand",
+            "label": "Brand",
+            "required": true,
+            "data-source": "${data.brands}"
+          },
+          {
+            "type": "TextInput",
+            "name": "custom_amount",
+            "label": "Amount (₹)",
+            "input-type": "number",
+            "required": true,
+            "helper-text": "${data.helper_text}"
+          },
+          {
+            "type": "Footer",
+            "label": "Continue",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "brand": "${form.brand}",
+                "custom_amount": "${form.custom_amount}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "OFFERS",
+      "title": "Offers",
+      "data": {
+        "offers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "none",
+              "title": "No offer",
+              "description": "Continue without an offer",
+              "enabled": true
+            },
+            {
+              "id": "GIFT50",
+              "title": "GIFT50",
+              "description": "Add ₹250 more to unlock",
+              "enabled": false
+            }
+          ]
+        },
+        "show_promo": {
+          "type": "boolean",
+          "__example__": true
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "RadioButtonsGroup",
+            "name": "offer",
+            "label": "Choose an offer",
+            "required": true,
+            "data-source": "${data.offers}"
+          },
+          {
+            "type": "TextInput",
+            "name": "promo_code",
+            "label": "Promo code",
+            "input-type": "text",
+            "required": false,
+            "helper-text": "Optional. Overrides the offer above",
+            "visible": "${data.show_promo}"
+          },
+          {
+            "type": "Footer",
+            "label": "Continue",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "offer": "${form.offer}",
+                "promo_code": "${form.promo_code}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "REVIEW",
+      "title": "Review",
+      "terminal": true,
+      "data": {
+        "brand_line": {
+          "type": "string",
+          "__example__": "Brand: Sample brand A"
+        },
+        "amount_line": {
+          "type": "string",
+          "__example__": "Amount: ₹500 each"
+        },
+        "quantity_line": {
+          "type": "string",
+          "__example__": "Quantity: 2"
+        },
+        "offer_line": {
+          "type": "string",
+          "__example__": "Offer: GIFT50 (-₹50)"
+        },
+        "total_line": {
+          "type": "string",
+          "__example__": "Total: ₹950"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "${data.brand_line}"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.amount_line}"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.quantity_line}"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.offer_line}"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.total_line}",
+            "font-weight": "bold"
+          },
+          {
+            "type": "Footer",
+            "label": "Confirm",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "confirmed": "yes"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

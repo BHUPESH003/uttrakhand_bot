@@ -4,10 +4,14 @@
  * audit log) inside the bot service — admin just tells us an
  * applicationId got approved.
  */
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import { ZodError } from "zod";
 import { getApplicationById, isWithinWindow, logMessage } from "db";
 import { config } from "../config";
-import { whatsAppClient } from "../whatsapp/client";
+import { maskPhone, whatsAppClient, WhatsAppApiError } from "../whatsapp/client";
+import { flowConfig, flowConfigSchema } from "../commerce-demo/config";
+import { sendDemoMessage } from "../commerce-demo/journeys";
+import { DemoSendBlockedError } from "../commerce-demo/sendGuard";
 import { resolveCopy, type Lang } from "../flow/copy";
 import { sessionStore } from "../session/store";
 import { MAIN_MENU_STATE_KEY, TRACK_STATUS_ID, BACK_TO_MENU_ID } from "../flow/definition";
@@ -139,4 +143,66 @@ export function registerInternalRoutes(app: FastifyInstance): void {
 
     return reply.status(200).send({ status: "sent" });
   });
+
+  registerDemoRoutes(app);
+}
+
+const authorized = (request: FastifyRequest) => request.headers["x-internal-secret"] === config.INTERNAL_API_SECRET;
+
+/**
+ * Commerce demo controls, same shared-secret guard as above:
+ *   GET/PUT /internal/demo-config  admin page (apps/admin) reads/writes the Flow flags
+ *   POST /internal/demo/send       setup scripts send a demo entry message from inside
+ *                                  this process (a Flow's session must live here)
+ */
+function registerDemoRoutes(app: FastifyInstance): void {
+  app.get("/internal/demo-config", async (request, reply) => {
+    if (!authorized(request)) return reply.status(401).send({ error: "Unauthorized" });
+    return reply.send({ config: flowConfig.get() });
+  });
+
+  app.put<{ Body: unknown }>("/internal/demo-config", async (request, reply) => {
+    if (!authorized(request)) return reply.status(401).send({ error: "Unauthorized" });
+    try {
+      return reply.send({ config: flowConfig.set(flowConfigSchema.partial().strict().parse(request.body ?? {})) });
+    } catch (err) {
+      if (err instanceof ZodError) {
+        return reply.status(400).send({ error: err.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; ") });
+      }
+      throw err;
+    }
+  });
+
+  app.post<{ Body: { to?: unknown; kind?: unknown; brandId?: unknown; screen?: unknown; mode?: unknown } }>(
+    "/internal/demo/send",
+    async (request, reply) => {
+      if (!authorized(request)) return reply.status(401).send({ error: "Unauthorized" });
+      const { to, kind, brandId, screen, mode } = request.body ?? {};
+      if (typeof to !== "string" || !/^\d{8,15}$/.test(to)) return reply.status(400).send({ error: "to must be a number like 919812345678" });
+      if (kind !== "flow" && kind !== "carousel" && kind !== "catalog") {
+        return reply.status(400).send({ error: "kind must be flow, carousel or catalog" });
+      }
+      if (screen !== undefined && screen !== "ITEM" && screen !== "OTHER_AMOUNT") {
+        return reply.status(400).send({ error: "screen must be ITEM or OTHER_AMOUNT" });
+      }
+      if (mode !== undefined && mode !== "draft" && mode !== "published") {
+        return reply.status(400).send({ error: "mode must be draft or published" });
+      }
+      try {
+        const result = await sendDemoMessage(to, kind, {
+          brandId: typeof brandId === "string" ? brandId : undefined,
+          screen,
+          mode,
+        });
+        return reply.send({ status: "sent", to: maskPhone(to), ...result });
+      } catch (err) {
+        // Guard blocks, validation errors and Meta errors all come back readable, never with a full number.
+        const meta = err instanceof WhatsAppApiError ? { code: err.code, fbtraceId: err.fbtraceId } : {};
+        return reply.status(err instanceof DemoSendBlockedError ? 403 : 502).send({
+          error: err instanceof Error ? err.message : String(err),
+          ...meta,
+        });
+      }
+    },
+  );
 }

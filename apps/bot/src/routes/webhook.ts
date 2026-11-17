@@ -12,8 +12,9 @@
  * Docs: https://developers.facebook.com/docs/graph-api/webhooks/getting-started
  */
 import type { FastifyInstance } from "fastify";
+import { logMessage, STATUS_LOG_TYPE } from "db";
 import { config } from "../config";
-import { whatsAppClient } from "../whatsapp/client";
+import { maskPhone, whatsAppClient } from "../whatsapp/client";
 import { parseWebhook, parseStatuses } from "../whatsapp/parse";
 import type { IncomingMessage, MetaStatus } from "../whatsapp/types";
 import { recordStatus } from "../whatsapp/deliveryTracker";
@@ -36,8 +37,43 @@ interface VerifyQuery {
  * the actual reply. A transient WhatsApp API hiccup (a timeout, a dropped
  * connection) on the read receipt shouldn't also cost the user their reply.
  */
+/**
+ * Meta retries a webhook delivery it thinks failed, so the same message or
+ * status can arrive twice. Remembers recent keys (message id, or
+ * "wamid:status") and reports repeats.
+ *
+ * ponytail: in-process, capped at DEDUPE_CAP keys (oldest dropped first) —
+ * a restart or a second instance forgets; move to the DB if that matters.
+ */
+const DEDUPE_CAP = 10_000;
+const seenKeys = new Set<string>();
+
+export function isDuplicate(key: string): boolean {
+  if (seenKeys.has(key)) return true;
+  seenKeys.add(key);
+  if (seenKeys.size > DEDUPE_CAP) seenKeys.delete(seenKeys.values().next().value!);
+  return false;
+}
+
+/** In-flight background work, so tests (and graceful shutdown) can wait for it. */
+const inFlight = new Set<Promise<void>>();
+
+function track(work: Promise<void>): void {
+  inFlight.add(work);
+  void work.finally(() => inFlight.delete(work));
+}
+
+/** Resolves once every webhook accepted so far has finished processing. */
+export async function webhookIdle(): Promise<void> {
+  while (inFlight.size > 0) await Promise.all([...inFlight]);
+}
+
 async function processIncoming(messages: IncomingMessage[]): Promise<void> {
   for (const message of messages) {
+    if (isDuplicate(message.messageId)) {
+      console.log("[webhook] duplicate message ignored", message.messageId);
+      continue;
+    }
     try {
       await whatsAppClient.markAsRead(message.messageId);
     } catch (err) {
@@ -53,10 +89,35 @@ async function processIncoming(messages: IncomingMessage[]): Promise<void> {
   }
 }
 
-/** Feeds delivery/read/failed receipts into deliveryTracker — see flow/aiChat.ts for what waits on these. Can't throw: recordStatus is plain Map bookkeeping. */
-function processStatuses(statuses: MetaStatus[]): void {
+/**
+ * Delivery receipts: feeds deliveryTracker (flow/aiChat.ts waits on these)
+ * and records each sent/delivered/read/failed in message history, with
+ * Meta's error code on failures. Never throws.
+ */
+async function processStatuses(statuses: MetaStatus[]): Promise<void> {
   for (const status of statuses) {
+    if (isDuplicate(`${status.id}:${status.status}`)) continue;
     recordStatus(status.id, status.status);
+
+    const recipient = status.recipient_id ?? status.recipient_user_id ?? "unknown";
+    const errorCodes = status.errors?.map((e) => e.code) ?? [];
+    if (status.status === "failed") {
+      console.warn(
+        `[webhook] message ${status.id} to ${maskPhone(recipient)} failed, error code(s) ${errorCodes.join(",") || "none"}`,
+      );
+    }
+    try {
+      await logMessage({
+        mobileNumber: recipient,
+        direction: "OUTGOING",
+        type: STATUS_LOG_TYPE,
+        status: status.status,
+        payload: { status: status.status, errorCodes, errors: status.errors ?? [] },
+        waMessageId: status.id,
+      });
+    } catch (err) {
+      console.error("[webhook] failed to log status", status.id, err);
+    }
   }
 }
 
@@ -75,12 +136,12 @@ export function registerWebhookRoutes(app: FastifyInstance): void {
 
   app.post("/webhook", async (request, reply) => {
     const messages = parseWebhook(request.body);
-    processStatuses(parseStatuses(request.body));
 
     // Fire and forget on purpose: Meta wants a fast 200 (it will retry the
     // whole webhook delivery if we're slow), and a WhatsApp API hiccup on
     // our reply shouldn't turn into a failed/retried webhook delivery.
-    void processIncoming(messages);
+    track(processStatuses(parseStatuses(request.body)));
+    track(processIncoming(messages));
 
     return reply.status(200).send("EVENT_RECEIVED");
   });

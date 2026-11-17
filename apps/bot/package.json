@@ -7,8 +7,21 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx src/flow/engine.test.ts"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json",
+    "test": "pnpm test:unit && pnpm test:integration",
+    "test:integration": "tsx src/flow/engine.test.ts && tsx --test --test-concurrency=1 src/commerce-demo/journeys.test.ts",
+    "test:unit": "tsx --test src/commerce-demo/data/data.test.ts src/whatsapp/messages.test.ts src/commerce-demo/flowEndpoint.test.ts src/commerce-demo/setup.test.ts",
+    "catalog:csv": "tsx scripts/catalog-csv.ts",
+    "demo:keys": "tsx scripts/demo.ts keys",
+    "demo:encryption": "tsx scripts/demo.ts encryption",
+    "demo:flow:create": "tsx scripts/demo.ts flow:create",
+    "demo:flow:update": "tsx scripts/demo.ts flow:update",
+    "demo:flow:publish": "tsx scripts/demo.ts flow:publish",
+    "demo:flow:send": "tsx scripts/demo.ts flow:send",
+    "demo:commerce": "tsx scripts/demo.ts commerce",
+    "demo:send:carousel": "tsx scripts/demo.ts send carousel",
+    "demo:send:catalog": "tsx scripts/demo.ts send catalog",
+    "demo:config": "tsx scripts/demo.ts config"
   },
   "dependencies": {
     "db": "workspace:*",

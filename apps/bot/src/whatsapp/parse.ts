@@ -51,6 +51,46 @@ function normalizeMessage(
         replyTitle: listReply.title,
       };
     }
+
+    const flowReply = message.interactive?.nfm_reply;
+    if (typeof flowReply?.response_json === "string") {
+      try {
+        const parsed: unknown = JSON.parse(flowReply.response_json);
+        if (typeof parsed === "object" && parsed !== null) {
+          return { ...base, type: "flow_reply", flowResponse: parsed as Record<string, unknown> };
+        }
+      } catch {
+        // malformed response_json -> falls through to "other"
+      }
+    }
+  }
+
+  if (message.type === "order" && message.order?.catalog_id && Array.isArray(message.order.product_items)) {
+    return {
+      ...base,
+      type: "order",
+      order: {
+        catalogId: message.order.catalog_id,
+        items: message.order.product_items.map((item) => ({
+          retailerId: String(item?.product_retailer_id ?? ""),
+          quantity: Number(item?.quantity),
+          itemPrice: Number(item?.item_price),
+          currency: String(item?.currency ?? ""),
+        })),
+      },
+    };
+  }
+
+  if (message.type === "button" && message.button?.payload) {
+    // Answers an open question from the docs: do carousel quick-reply taps
+    // arrive as this template-style shape or as interactive.button_reply?
+    console.log(`[webhook] quick-reply tap arrived as type=button (payload ${message.button.payload})`);
+    return {
+      ...base,
+      type: "button_reply",
+      replyId: message.button.payload,
+      replyTitle: message.button.text,
+    };
   }
 
   if (message.type === "audio" && message.audio?.id) {

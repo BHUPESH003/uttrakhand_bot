@@ -32,9 +32,10 @@ export interface MetaMessage {
     voice?: boolean;
     sha256?: string;
   };
-  // Present when the user tapped a button or list row we sent earlier.
+  // Present when the user tapped a button or list row we sent earlier, or
+  // completed a Flow.
   interactive?: {
-    type: string; // "button_reply" | "list_reply"
+    type: string; // "button_reply" | "list_reply" | "nfm_reply"
     button_reply?: {
       id: string;
       title: string;
@@ -44,6 +45,28 @@ export interface MetaMessage {
       title: string;
       description?: string;
     };
+    // A completed WhatsApp Flow. response_json is a JSON *string* holding
+    // flow_token plus whatever params our Flow endpoint returned with SUCCESS.
+    // https://developers.facebook.com/documentation/business-messaging/whatsapp/flows/guides/receiveflowresponse
+    nfm_reply?: {
+      name?: string; // "flow"
+      body?: string; // always "Sent"
+      response_json: string;
+    };
+  };
+  // type === "order": a cart sent from a catalog (multi/single-product message).
+  // https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/order
+  order?: {
+    catalog_id: string;
+    text?: string;
+    product_items: Array<{ product_retailer_id: string; quantity: number; item_price: number; currency: string }>;
+  };
+  // type === "button": a quick-reply tap on a template. Meta's docs don't
+  // show the webhook for carousel quick-reply taps, so this shape is
+  // accepted alongside interactive.button_reply.
+  button?: {
+    payload: string;
+    text: string;
   };
 }
 
@@ -52,7 +75,11 @@ export interface MetaStatus {
   id: string;
   status: string; // "sent" | "delivered" | "read" | "failed"
   timestamp: string;
-  recipient_id: string;
+  // Omitted when the message went to a BSUID and no phone number is known.
+  recipient_id?: string;
+  recipient_user_id?: string;
+  // Only on failures.
+  errors?: Array<{ code: number; title?: string; message?: string; error_data?: { details?: string } }>;
 }
 
 export interface MetaWebhookValue {
@@ -96,13 +123,20 @@ export interface MetaWebhookPayload {
 export interface IncomingMessage {
   from: string;
   messageId: string;
-  type: "text" | "button_reply" | "list_reply" | "audio" | "other";
+  type: "text" | "button_reply" | "list_reply" | "flow_reply" | "order" | "audio" | "other";
   /** Set when type === "text". */
   text?: string;
   /** Set when type is a button/list reply: the id you assigned that button/row. */
   replyId?: string;
   /** Set when type is a button/list reply: the title text that was shown. */
   replyTitle?: string;
+  /** Set when type === "flow_reply": the parsed response_json (flow_token + endpoint params). */
+  flowResponse?: Record<string, unknown>;
+  /** Set when type === "order": the cart. Prices are as Meta reports them (catalog units, e.g. rupees). */
+  order?: {
+    catalogId: string;
+    items: Array<{ retailerId: string; quantity: number; itemPrice: number; currency: string }>;
+  };
   /** Set when type === "audio": Meta's media id — pass to WhatsAppClient.getMediaInfo to get a download URL. */
   mediaId?: string;
   /** Set when type === "audio": Meta's reported MIME type, e.g. "audio/ogg; codecs=opus". */

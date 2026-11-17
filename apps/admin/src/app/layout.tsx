@@ -41,7 +41,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               </span>
             </Link>
             {showLogout && (
-              <form action={logout}>
+              <form action={logout} className="flex items-center gap-3">
+                <Link href="/demo-config" className="text-sm text-white/90 underline-offset-2 hover:underline">
+                  Demo flags
+                </Link>
                 <button
                   type="submit"
                   className="rounded-md border border-white/30 px-3 py-1.5 text-sm hover:bg-white/10"

@@ -20,6 +20,9 @@ import {
 import type { Service } from "types";
 import { config } from "../config";
 import type { IncomingMessage } from "../whatsapp/types";
+import { COMMERCE_MENU_STATE_KEY, commerceStates, routeCommerceInput } from "../commerce-demo/journeys";
+import { isDemoRecipient } from "../commerce-demo/sendGuard";
+import { backToMenuButton } from "./backToMenu";
 import type { CopyKey } from "./copy";
 import type { FlowContext, FlowState } from "./types";
 
@@ -36,11 +39,12 @@ export const APPLY_CHOOSE_STATE_KEY = "APPLY_CHOOSE";
 export const APPLY_HANDOFF_STATE_KEY = "APPLY_HANDOFF";
 export const DOWNLOAD_STATE_KEY = "DOWNLOAD";
 export const AI_CHAT_STATE_KEY = "AI_CHAT";
-export const BACK_TO_MENU_ID = "back_to_menu";
+export { BACK_TO_MENU_ID, backToMenuButton } from "./backToMenu";
 // Same id as MAIN_MENU's "Track Status" row — reused as a button on the
 // submission-confirmation message too, and handled globally (see engine.ts)
 // so tapping it works no matter what state the session is actually in.
 export const TRACK_STATUS_ID = "menu_track";
+const COMMERCE_MENU_ROW_ID = "menu_commerce";
 
 /**
  * Typed anytime, from any state, restart the conversation from WELCOME —
@@ -69,6 +73,13 @@ const RESTART_KEYWORDS = new Set([
  */
 const LANGUAGE_KEYWORDS = new Set(["language", "lang", "भाषा"]);
 
+/**
+ * "menu" — only acted on inside a state group (returns to that group's
+ * menu, e.g. the commerce demo). Elsewhere it falls through to the current
+ * state unchanged.
+ */
+const MENU_KEYWORDS = new Set(["menu", "मेनू"]);
+
 function firstWord(text: string): string {
   // \p{M} (combining marks) matters here as much as \p{L}/\p{N} — Devanagari
   // vowel signs (matras) like "ा" are category Mark, not Letter, so without
@@ -78,7 +89,7 @@ function firstWord(text: string): string {
     .replace(/[^\p{L}\p{N}\p{M}]/gu, "");
 }
 
-export type GlobalTextCommand = "RESTART" | "CHANGE_LANGUAGE";
+export type GlobalTextCommand = "RESTART" | "CHANGE_LANGUAGE" | "MENU";
 
 /**
  * Free-text commands the engine checks BEFORE handing input to the current
@@ -90,6 +101,7 @@ export function matchGlobalTextCommand(text: string): GlobalTextCommand | null {
   const word = firstWord(text);
   if (RESTART_KEYWORDS.has(word)) return "RESTART";
   if (LANGUAGE_KEYWORDS.has(word)) return "CHANGE_LANGUAGE";
+  if (MENU_KEYWORDS.has(word)) return "MENU";
   return null;
 }
 
@@ -125,16 +137,20 @@ function statusText(
     : label;
 }
 
-/** Every state other than WELCOME/OPTED_OUT ends its menu with this — one button, routed by the engine's global back-to-menu rule. Exported for flow/aiChat.ts, which appends the same escape hatch to every AI turn (see the contract's "guarantee the escape hatch ourselves" recommendation). */
-export function backToMenuButton(ctx: FlowContext) {
-  return {
-    kind: "sendReplyButtons" as const,
-    body: ctx.t("back_to_menu"),
-    buttons: [{ id: BACK_TO_MENU_ID, title: ctx.t("back_to_menu") }],
-  };
+/**
+ * Global routes owned by the flow definition, checked by the engine before
+ * the current state sees the message (after back-to-menu / track). Today:
+ * the commerce demo's prefixed button ids and completed Flows.
+ */
+export async function routeGlobalInput(ctx: FlowContext): Promise<string | null> {
+  return routeCommerceInput(ctx);
 }
 
 export const flowStates: Record<string, FlowState> = {
+  // The commerce demo: its own group of states (own menu, help text and
+  // guarded WhatsApp client) — see commerce-demo/journeys.ts.
+  ...commerceStates,
+
   WELCOME: {
     key: "WELCOME",
     onEnter: (ctx) => [
@@ -215,6 +231,11 @@ export const flowStates: Record<string, FlowState> = {
                 id: "menu_change_language",
                 title: ctx.t("menu_change_language"),
               },
+              // Only shown to numbers the demo send guard would let through
+              // (DEMO_SEND_ENABLED + DEMO_ALLOWED_RECIPIENTS).
+              ...(isDemoRecipient(ctx.session.userId)
+                ? [{ id: COMMERCE_MENU_ROW_ID, title: ctx.t("menu_commerce") }]
+                : []),
             ],
           },
         ],
@@ -235,6 +256,8 @@ export const flowStates: Record<string, FlowState> = {
           return LANGUAGE_STATE_KEY;
         case "menu_chat":
           return AI_CHAT_STATE_KEY;
+        case COMMERCE_MENU_ROW_ID:
+          return COMMERCE_MENU_STATE_KEY;
         default:
           return null;
       }

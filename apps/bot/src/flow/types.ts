@@ -4,7 +4,8 @@
  * "APPLY_CHOOSE" mean. All menu-specific behaviour lives in
  * flow/definition.ts as data conforming to FlowState.
  */
-import type { ReplyButton, ListSection } from "../whatsapp/client";
+import type { ReplyButton, ListSection, WhatsAppClient } from "../whatsapp/client";
+import type { CarouselInput, FlowInput, ProductInput, ProductListInput } from "../whatsapp/messages";
 import type { IncomingMessage } from "../whatsapp/types";
 import type { Session } from "../session/store";
 import type { CopyKey } from "./copy";
@@ -32,7 +33,24 @@ export type OutgoingAction =
       buttonText: string;
       url: string;
       headerText?: string;
-    };
+    }
+  | ({ kind: "sendCarousel" } & CarouselInput)
+  | ({ kind: "sendFlow" } & FlowInput)
+  | ({ kind: "sendProductList" } & ProductListInput)
+  | ({ kind: "sendProduct" } & ProductInput);
+
+/**
+ * A self-contained set of states (e.g. the commerce demo) with its own
+ * menu, help text and WhatsApp client. While the session is in a grouped
+ * state, the engine sends through `client`, "hi"/"menu" return to
+ * `menuKey`, and unrecognized input gets `helpKey` (without re-sending the
+ * current state).
+ */
+export interface FlowGroup {
+  menuKey: string;
+  helpKey: CopyKey;
+  client: WhatsAppClient;
+}
 
 export interface FlowContext {
   session: Session;
@@ -43,6 +61,8 @@ export interface FlowContext {
 
 export interface FlowState {
   key: string;
+  /** Set on every state of a group — see FlowGroup. */
+  group?: FlowGroup;
   /**
    * What to send when the engine transitions into this state. Async
    * because some states (e.g. TRACK_RESULT) need a DB lookup to know what

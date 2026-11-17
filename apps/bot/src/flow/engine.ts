@@ -27,6 +27,7 @@ import {
   TRACK_STATUS_ID,
   handleEntry,
   matchGlobalTextCommand,
+  routeGlobalInput,
 } from "./definition";
 import { handleAiChatTurn } from "./aiChat";
 import { resolveCopy, type CopyKey, type Lang } from "./copy";
@@ -49,9 +50,11 @@ async function enterState(
   // The `!` is safe: ENTRY_STATE_KEY is guaranteed present in flowStates.
   const state = flowStates[stateKey] ?? flowStates[ENTRY_STATE_KEY]!;
   const ctx: FlowContext = { session, message, t: makeT(session) };
+  // A grouped state (e.g. the commerce demo) sends through its own client.
+  const sender = state.group?.client ?? client;
 
   for (const action of await state.onEnter(ctx)) {
-    await executeAction(client, session.userId, action);
+    await executeAction(sender, session.userId, action);
   }
 
   session.currentStateKey = state.key;
@@ -127,8 +130,12 @@ export async function handleIncomingMessage(
   // of it. RESTART has no such guard — jumping back to WELCOME can never
   // bypass anything.
   const hasOnboarded = session.data.lang !== undefined;
+  const currentState = flowStates[session.currentStateKey] ?? flowStates[ENTRY_STATE_KEY]!;
+  const group = currentState.group;
+  const ctx: FlowContext = { session, message, t: makeT(session) };
 
   let nextKey: string | null;
+  let routed: string | null = null;
   if (message.replyId === BACK_TO_MENU_ID) {
     nextKey = MAIN_MENU_STATE_KEY;
   } else if (message.replyId === TRACK_STATUS_ID) {
@@ -136,6 +143,13 @@ export async function handleIncomingMessage(
     // Status" button sent on the submission-confirmation message, tapped
     // from whatever state the session happens to be sitting in.
     nextKey = TRACK_ASK_STATE_KEY;
+  } else if ((routed = await routeGlobalInput(ctx)) !== null) {
+    // Definition-owned global routes (e.g. commerce-demo button ids like
+    // "view:brand_a", completed Flows) — work from any state, like the two above.
+    nextKey = routed;
+  } else if (group && (globalCommand === "RESTART" || globalCommand === "MENU")) {
+    // Inside a group, "hi"/"menu" go back to that group's menu, not WELCOME.
+    nextKey = group.menuKey;
   } else if (globalCommand === "RESTART") {
     // Same consent-skip as the idle/fresh-session branch above — a "hi"
     // mid-session shouldn't re-ask for consent already given this session.
@@ -149,8 +163,16 @@ export async function handleIncomingMessage(
     // module instead of living as data in flow/definition.ts.
     nextKey = await handleAiChatTurn(client, session, message);
   } else {
-    const currentState = flowStates[session.currentStateKey] ?? flowStates[ENTRY_STATE_KEY]!;
-    nextKey = await currentState.handleInput({ session, message, t: makeT(session) });
+    nextKey = await currentState.handleInput(ctx);
+  }
+
+  // Grouped states: unrecognized input -> the group's short help text only
+  // (re-sending e.g. a carousel or a payment prompt would just be noise).
+  if (nextKey === null && group) {
+    await executeAction(group.client, session.userId, { kind: "sendText", text: ctx.t(group.helpKey) });
+    session.updatedAt = new Date();
+    await sessionStore.saveSession(session);
+    return;
   }
 
   // GLOBAL: unrecognized input -> friendly fallback, then re-show whatever

@@ -11,6 +11,40 @@
  * Reference: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
  */
 import { config } from "../config";
+import {
+  buildCarousel,
+  buildCtaUrl,
+  buildFlow,
+  buildList,
+  buildOrderDetails,
+  buildOrderStatus,
+  buildProduct,
+  buildProductList,
+  buildReplyButtons,
+  type CarouselInput,
+  type FlowInput,
+  type ListSection,
+  type OrderDetailsInput,
+  type OrderStatusInput,
+  type ProductInput,
+  type ProductListInput,
+  type ReplyButton,
+} from "./messages";
+
+export type { ReplyButton, ListRow, ListSection } from "./messages";
+
+/**
+ * Called with the recipient before every outbound send; throw to block it.
+ * The default client has none — see commerce-demo/sendGuard.ts for the
+ * demo's allowlist guard, which gets its own client instance so the
+ * certificate service is never affected by demo flags.
+ */
+export type SendGuard = (to: string) => void;
+
+/** "919812345678" -> "********5678" — full numbers never go to logs. */
+export function maskPhone(phone: string): string {
+  return phone.length <= 4 ? "****" : `${"*".repeat(phone.length - 4)}${phone.slice(-4)}`;
+}
 
 /** Meta's error responses always look like this. */
 interface MetaErrorResponse {
@@ -56,23 +90,6 @@ function extractWamid(response: unknown): string | undefined {
   return messages?.[0]?.id;
 }
 
-/**
- * Meta enforces these character limits server-side and rejects the whole
- * message with a 400 if any is exceeded (error 131009) — checking here
- * turns that into an immediate, clear error pointing at the offending
- * string, instead of a webhook-side crash discovered only by trying it in
- * a language where the count is less obvious (Devanagari conjuncts run
- * several codepoints per visible character, so copy that looks short can
- * still overflow).
- */
-function assertMaxLength(value: string, max: number, label: string): void {
-  if (value.length > max) {
-    throw new Error(
-      `${label} exceeds WhatsApp's ${max}-character limit (got ${value.length}): "${value}"`,
-    );
-  }
-}
-
 export class WhatsAppApiError extends Error {
   constructor(
     message: string,
@@ -84,42 +101,39 @@ export class WhatsAppApiError extends Error {
   }
 }
 
-/** One button for sendReplyButtons. WhatsApp allows at most 3 per message. */
-export interface ReplyButton {
-  /** Your own identifier, echoed back in the webhook when tapped (e.g. "menu_claim"). */
-  id: string;
-  /** Visible label on the button. WhatsApp caps this at 20 characters. */
-  title: string;
-}
-
-/** One row inside a list section. WhatsApp allows at most 10 rows total per message. */
-export interface ListRow {
-  id: string;
-  title: string;
-  description?: string;
-}
-
-export interface ListSection {
-  /** Optional header shown above this group of rows. */
-  title?: string;
-  rows: ListRow[];
-}
+/** sendOrderDetails/sendOrderStatus result: "demo" means Meta was not called (no WA_PAYMENT_CONFIG_NAME). */
+export type PaymentSendResult = { provider: "demo" } | { provider: "whatsapp"; wamid: string | undefined };
 
 export class WhatsAppClient {
   private readonly baseUrl: string;
+  private readonly phoneNumberId: string;
   private readonly token: string;
   private readonly graphApiVersion: string;
+  private readonly sendGuard?: SendGuard;
+  private readonly paymentConfigName?: string;
 
   constructor(options?: {
     phoneNumberId?: string;
     token?: string;
     graphApiVersion?: string;
+    sendGuard?: SendGuard;
+    /** Defaults to config.WA_PAYMENT_CONFIG_NAME. Unset = payments use the demo provider, never Meta. */
+    paymentConfigName?: string;
   }) {
     const phoneNumberId = options?.phoneNumberId ?? config.PHONE_NUMBER_ID;
     const version = options?.graphApiVersion ?? config.GRAPH_API_VERSION;
     this.token = options?.token ?? config.WHATSAPP_TOKEN;
     this.graphApiVersion = version;
     this.baseUrl = `https://graph.facebook.com/${version}/${phoneNumberId}/messages`;
+    this.phoneNumberId = phoneNumberId;
+    this.sendGuard = options?.sendGuard;
+    this.paymentConfigName = options?.paymentConfigName ?? config.WA_PAYMENT_CONFIG_NAME;
+  }
+
+  /** Every outbound message goes through here: guard first, then the network seam. */
+  private async send(body: { to: string; [key: string]: unknown }): Promise<unknown> {
+    this.sendGuard?.(body.to);
+    return this.post(body);
   }
 
   /**
@@ -129,13 +143,20 @@ export class WhatsAppClient {
    * run unmodified, only the actual network call is swapped out.
    */
   protected async post(body: unknown): Promise<unknown> {
-    console.log("[whatsapp] -> POST /messages", JSON.stringify(body));
+    const to = (body as { to?: unknown }).to;
+    const logged = typeof to === "string" ? { ...(body as object), to: maskPhone(to) } : body;
+    console.log("[whatsapp] -> POST /messages", JSON.stringify(logged));
 
     const response = await this.fetchWithRetry(body);
 
     const responseBody: unknown = await response.json().catch(() => undefined);
+    // Not the raw body: a success response carries contacts[].wa_id, the
+    // recipient's full number.
     console.log(
-      `[whatsapp] <- ${response.status} ${JSON.stringify(responseBody)}`,
+      `[whatsapp] <- ${response.status}`,
+      isMetaErrorResponse(responseBody)
+        ? JSON.stringify(responseBody)
+        : `wamid=${extractWamid(responseBody) ?? "-"}`,
     );
 
     if (!response.ok) {
@@ -194,7 +215,7 @@ export class WhatsAppClient {
    * "919812345678" for a +91 98123 45678 number.
    */
   async sendText(to: string, body: string, previewUrl = false): Promise<void> {
-    await this.post({
+    await this.send({
       messaging_product: "whatsapp",
       to,
       type: "text",
@@ -207,7 +228,7 @@ export class WhatsAppClient {
    * must be public HTTPS) — you never upload bytes to Meta from this server.
    */
   async sendImage(to: string, imageUrl: string, caption?: string): Promise<void> {
-    await this.post({
+    await this.send({
       messaging_product: "whatsapp",
       to,
       type: "image",
@@ -222,7 +243,7 @@ export class WhatsAppClient {
     filename?: string,
     caption?: string,
   ): Promise<void> {
-    await this.post({
+    await this.send({
       messaging_product: "whatsapp",
       to,
       type: "document",
@@ -240,30 +261,7 @@ export class WhatsAppClient {
     bodyText: string,
     buttons: ReplyButton[],
   ): Promise<void> {
-    if (buttons.length === 0 || buttons.length > 3) {
-      throw new Error(
-        `sendReplyButtons: WhatsApp allows 1-3 buttons, got ${buttons.length}`,
-      );
-    }
-    for (const button of buttons) {
-      assertMaxLength(button.title, 20, `Reply button title (id "${button.id}")`);
-    }
-
-    await this.post({
-      messaging_product: "whatsapp",
-      to,
-      type: "interactive",
-      interactive: {
-        type: "button",
-        body: { text: bodyText },
-        action: {
-          buttons: buttons.map((button) => ({
-            type: "reply",
-            reply: { id: button.id, title: button.title },
-          })),
-        },
-      },
-    });
+    await this.send(buildReplyButtons(to, { body: bodyText, buttons }));
   }
 
   /**
@@ -278,43 +276,7 @@ export class WhatsAppClient {
     buttonText: string,
     sections: ListSection[],
   ): Promise<void> {
-    const totalRows = sections.reduce((sum, section) => sum + section.rows.length, 0);
-    if (totalRows === 0 || totalRows > 10) {
-      throw new Error(
-        `sendList: WhatsApp allows 1-10 total rows across all sections, got ${totalRows}`,
-      );
-    }
-    assertMaxLength(buttonText, 20, "List button text");
-    for (const section of sections) {
-      if (section.title) assertMaxLength(section.title, 24, "List section title");
-      for (const row of section.rows) {
-        assertMaxLength(row.title, 24, `List row title (id "${row.id}")`);
-        if (row.description) {
-          assertMaxLength(row.description, 72, `List row description (id "${row.id}")`);
-        }
-      }
-    }
-
-    await this.post({
-      messaging_product: "whatsapp",
-      to,
-      type: "interactive",
-      interactive: {
-        type: "list",
-        body: { text: bodyText },
-        action: {
-          button: buttonText,
-          sections: sections.map((section) => ({
-            title: section.title,
-            rows: section.rows.map((row) => ({
-              id: row.id,
-              title: row.title,
-              description: row.description,
-            })),
-          })),
-        },
-      },
-    });
+    await this.send(buildList(to, { body: bodyText, buttonText, sections }));
   }
 
   /**
@@ -330,23 +292,58 @@ export class WhatsAppClient {
     url: string,
     headerText?: string,
   ): Promise<void> {
-    assertMaxLength(buttonText, 20, "CTA button text");
-    if (headerText) assertMaxLength(headerText, 60, "CTA header text");
+    await this.send(buildCtaUrl(to, { body: bodyText, buttonText, url, headerText }));
+  }
 
-    await this.post({
-      messaging_product: "whatsapp",
-      to,
-      type: "interactive",
-      interactive: {
-        type: "cta_url",
-        header: headerText ? { type: "text", text: headerText } : undefined,
-        body: { text: bodyText },
-        action: {
-          name: "cta_url",
-          parameters: { display_text: buttonText, url },
-        },
-      },
+  /**
+   * Opens a WhatsApp Flow. With flowAction "navigate" (default) it can open
+   * on a given entry screen with initial data; with "data_exchange" the
+   * Flow endpoint's INIT response decides the first screen — use that to
+   * open on a screen that isn't an entry screen. Returns the wamid.
+   */
+  async sendFlow(to: string, input: FlowInput): Promise<string | undefined> {
+    return extractWamid(await this.send(buildFlow(to, input)));
+  }
+
+  /** 2-10 horizontally scrolling image cards, each with one button. Returns the wamid. */
+  async sendCarousel(to: string, input: CarouselInput): Promise<string | undefined> {
+    return extractWamid(await this.send(buildCarousel(to, input)));
+  }
+
+  /** Multi-product message from a Meta Commerce catalog (max 30 products / 10 sections). */
+  async sendProductList(to: string, input: ProductListInput): Promise<string | undefined> {
+    return extractWamid(await this.send(buildProductList(to, input)));
+  }
+
+  /** Single-product message from a Meta Commerce catalog. */
+  async sendProduct(to: string, input: ProductInput): Promise<string | undefined> {
+    return extractWamid(await this.send(buildProduct(to, input)));
+  }
+
+  /**
+   * WhatsApp Pay (India) order_details. Always validates; only calls Meta
+   * when a payment configuration is set (WA_PAYMENT_CONFIG_NAME) —
+   * otherwise returns { provider: "demo" } and the caller runs the demo
+   * payment provider instead.
+   */
+  async sendOrderDetails(
+    to: string,
+    input: Omit<OrderDetailsInput, "configurationName">,
+  ): Promise<PaymentSendResult> {
+    const payload = buildOrderDetails(to, {
+      ...input,
+      // Placeholder only so the demo path still validates the rest of the order.
+      configurationName: this.paymentConfigName ?? "demo",
     });
+    if (!this.paymentConfigName) return { provider: "demo" };
+    return { provider: "whatsapp", wamid: extractWamid(await this.send(payload)) };
+  }
+
+  /** Status update for an order_details message. Same WA_PAYMENT_CONFIG_NAME gate as sendOrderDetails. */
+  async sendOrderStatus(to: string, input: OrderStatusInput): Promise<PaymentSendResult> {
+    const payload = buildOrderStatus(to, input);
+    if (!this.paymentConfigName) return { provider: "demo" };
+    return { provider: "whatsapp", wamid: extractWamid(await this.send(payload)) };
   }
 
   /**
@@ -362,7 +359,7 @@ export class WhatsAppClient {
    * after it (see flow/aiChat.ts).
    */
   async sendAudio(to: string, audioUrl: string): Promise<string | undefined> {
-    const response = await this.post({
+    const response = await this.send({
       messaging_product: "whatsapp",
       to,
       type: "audio",
@@ -437,6 +434,129 @@ export class WhatsAppClient {
       status: "read",
       message_id: messageId,
     });
+  }
+
+  // ---------------------------------------------------------------------
+  // Management calls (setup scripts only). Same Graph API, other endpoints:
+  // business encryption key, Flows API, commerce settings. Verified against
+  //   https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi
+  //   https://developers.facebook.com/documentation/business-messaging/whatsapp/catalogs/set-commerce-settings
+  // ---------------------------------------------------------------------
+
+  /**
+   * One Graph API request to `/{version}/{path}`. Logs method, path and the
+   * response body — management responses carry ids and statuses, no phone
+   * numbers; the token is never logged. Throws WhatsAppApiError on non-2xx.
+   */
+  protected async graph(
+    method: "GET" | "POST",
+    path: string,
+    options: { query?: Record<string, string>; json?: unknown; form?: URLSearchParams; multipart?: FormData } = {},
+  ): Promise<unknown> {
+    const url = new URL(`https://graph.facebook.com/${this.graphApiVersion}/${path}`);
+    for (const [k, v] of Object.entries(options.query ?? {})) url.searchParams.set(k, v);
+    const headers: Record<string, string> = { Authorization: `Bearer ${this.token}` };
+    let body: string | URLSearchParams | FormData | undefined;
+    if (options.json !== undefined) {
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(options.json);
+    } else if (options.form) {
+      body = options.form; // fetch sets application/x-www-form-urlencoded
+    } else if (options.multipart) {
+      body = options.multipart; // fetch sets the multipart boundary
+    }
+    console.log(`[whatsapp] -> ${method} /${path}${url.search}`);
+    const response = await fetch(url, { method, headers, body });
+    const responseBody: unknown = await response.json().catch(() => undefined);
+    console.log(`[whatsapp] <- ${response.status} ${JSON.stringify(responseBody)}`);
+    if (!response.ok) {
+      if (isMetaErrorResponse(responseBody)) {
+        throw new WhatsAppApiError(responseBody.error.message, responseBody.error.code, responseBody.error.fbtrace_id);
+      }
+      throw new WhatsAppApiError(`Graph API ${method} /${path} failed with status ${response.status}`, response.status);
+    }
+    return responseBody;
+  }
+
+  /** Uploads the Flows endpoint's public key for this number (Meta signs it on upload). Form field: business_public_key. */
+  async setBusinessPublicKey(publicKeyPem: string): Promise<unknown> {
+    return this.graph("POST", `${this.phoneNumberId}/whatsapp_business_encryption`, {
+      form: new URLSearchParams({ business_public_key: publicKeyPem }),
+    });
+  }
+
+  /** `{ data: [{ business_public_key, business_public_key_signature_status: "VALID" | "MISMATCH" }] }` */
+  async getBusinessPublicKey(): Promise<unknown> {
+    return this.graph("GET", `${this.phoneNumberId}/whatsapp_business_encryption`);
+  }
+
+  /**
+   * POST /{WABA-ID}/flows. Creates a DRAFT Flow (publish stays false) with its
+   * JSON in the same request; the response carries `id` and any
+   * `validation_errors`. There is no app parameter here — connect the app
+   * afterwards with updateFlowMetadata({ applicationId }).
+   */
+  async createFlow(
+    wabaId: string,
+    input: { name: string; categories: string[]; endpointUri?: string; flowJson?: string },
+  ): Promise<{ id?: string; success?: boolean; validation_errors?: unknown[] }> {
+    return (await this.graph("POST", `${wabaId}/flows`, {
+      json: { name: input.name, categories: input.categories, endpoint_uri: input.endpointUri, flow_json: input.flowJson },
+    })) as { id?: string; success?: boolean; validation_errors?: unknown[] };
+  }
+
+  /** POST /{FLOW-ID}: name, categories, endpoint_uri, application_id (the Meta app connected to the Flow). */
+  async updateFlowMetadata(
+    flowId: string,
+    input: { name?: string; categories?: string[]; endpointUri?: string; applicationId?: string },
+  ): Promise<unknown> {
+    return this.graph("POST", flowId, {
+      json: {
+        name: input.name,
+        categories: input.categories,
+        endpoint_uri: input.endpointUri,
+        application_id: input.applicationId,
+      },
+    });
+  }
+
+  /** POST /{FLOW-ID}/assets as multipart: file + name "flow.json" + asset_type FLOW_JSON. Returns validation_errors. */
+  async uploadFlowJson(flowId: string, flowJson: string): Promise<{ success?: boolean; validation_errors?: unknown[] }> {
+    const form = new FormData();
+    form.append("file", new Blob([flowJson], { type: "application/json" }), "flow.json");
+    form.append("name", "flow.json");
+    form.append("asset_type", "FLOW_JSON");
+    return (await this.graph("POST", `${flowId}/assets`, { multipart: form })) as {
+      success?: boolean;
+      validation_errors?: unknown[];
+    };
+  }
+
+  /** POST /{FLOW-ID}/publish. Irreversible: a published Flow can't be edited or deleted, only deprecated. */
+  async publishFlow(flowId: string): Promise<unknown> {
+    return this.graph("POST", `${flowId}/publish`);
+  }
+
+  /** GET /{FLOW-ID}?fields=... — status, validation_errors, health_status (for this number), endpoint_uri. (Not `preview`: its URL embeds an access token.) */
+  async getFlow(flowId: string): Promise<unknown> {
+    return this.graph("GET", flowId, {
+      query: {
+        fields: `id,name,status,categories,validation_errors,json_version,data_api_version,endpoint_uri,health_status.phone_number(${this.phoneNumberId})`,
+      },
+    });
+  }
+
+  /** `{ data: [{ is_cart_enabled, is_catalog_visible, id }] }` for this number. */
+  async getCommerceSettings(): Promise<unknown> {
+    return this.graph("GET", `${this.phoneNumberId}/whatsapp_commerce_settings`);
+  }
+
+  /** POST with query params is_cart_enabled / is_catalog_visible, per the docs. */
+  async setCommerceSettings(input: { isCartEnabled?: boolean; isCatalogVisible?: boolean }): Promise<unknown> {
+    const query: Record<string, string> = {};
+    if (input.isCartEnabled !== undefined) query.is_cart_enabled = String(input.isCartEnabled);
+    if (input.isCatalogVisible !== undefined) query.is_catalog_visible = String(input.isCatalogVisible);
+    return this.graph("POST", `${this.phoneNumberId}/whatsapp_commerce_settings`, { query });
   }
 }
 

@@ -41,6 +41,26 @@ export async function executeAction(
     case "sendCtaUrl":
       await client.sendCtaUrl(to, action.body, action.buttonText, action.url, action.headerText);
       break;
+    case "sendCarousel": {
+      const { kind: _, ...input } = action;
+      wamid = await client.sendCarousel(to, input);
+      break;
+    }
+    case "sendFlow": {
+      const { kind: _, ...input } = action;
+      wamid = await client.sendFlow(to, input);
+      break;
+    }
+    case "sendProductList": {
+      const { kind: _, ...input } = action;
+      wamid = await client.sendProductList(to, input);
+      break;
+    }
+    case "sendProduct": {
+      const { kind: _, ...input } = action;
+      wamid = await client.sendProduct(to, input);
+      break;
+    }
   }
 
   // Audit trail, mirroring the reference bot's MessageHistory /
@@ -52,6 +72,7 @@ export async function executeAction(
     type: action.kind,
     status: "sent",
     payload: action,
+    waMessageId: wamid ?? null,
   });
 
   return wamid;
